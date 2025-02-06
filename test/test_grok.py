@@ -1,62 +1,89 @@
+import asyncio
+import aiohttp
 import os
 from dotenv import load_dotenv
-import requests
+import json
 
 # Load environment variables
 load_dotenv()
 
-GROK_API_KEY = os.getenv("GROK_API_KEY")
-
-def test_grok():
-    """Test Grok API with a simple request"""
-    if not GROK_API_KEY:
-        print("Error: GROK_API_KEY not found in environment variables")
-        return False
-        
+async def test_grok():
+    """Test Grok API with a simple prediction"""
     headers = {
-        "Authorization": f"Bearer {GROK_API_KEY}",
+        "Authorization": f"Bearer {os.getenv('GROK_API_KEY')}",
         "Content-Type": "application/json"
     }
     
-    # Simple test message
+    test_text = "BTC to 100k"
+    
     payload = {
-        "model": "grok-2-latest",
+        "model": "grok-2",
         "messages": [
             {
                 "role": "system",
-                "content": "You are a test assistant."
+                "content": """You are analyzing tweets to extract prediction targets and sentiment.
+For each prediction, identify the target and whether it's bullish or bearish.
+Return in JSON format:
+{
+    "targets": [
+        {
+            "name": "target name",
+            "type": "token/project/meta",
+            "sentiment": "bullish/bearish"
+        }
+    ],
+    "reasoning": "brief explanation"
+}"""
             },
-            {
-                "role": "user",
-                "content": "Testing. Just say hi and hello world and nothing else."
-            }
+            {"role": "user", "content": f"Tweet: {test_text}"}
         ],
-        "stream": False,
-        "temperature": 0
+        "temperature": 0.0,
+        "max_tokens": 150
     }
     
+    print("Testing Grok API...")
+    print(f"API Key (first 5 chars): {os.getenv('GROK_API_KEY')[:5]}...")
+    print(f"Test text: {test_text}")
+    
     try:
-        print("Testing Grok API connection...")
-        print(f"API Key (first 5 chars): {GROK_API_KEY[:5]}...")
-        print("Making request...")
-        
-        response = requests.post(
-            "https://api.x.ai/v1/chat/completions",
-            json=payload,
-            headers=headers
-        )
-        
-        print(f"Status code: {response.status_code}")
-        print("Response headers:", response.headers)
-        print("Response body:", response.text)
-        
-        response.raise_for_status()
-        return True
-        
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session:
+            async with session.post("https://api.x.ai/v1/chat/completions", json=payload, headers=headers) as response:
+                print(f"Response status: {response.status}")
+                response_text = await response.text()
+                print(f"Raw response: {response_text}")
+                
+                if response.status == 200:
+                    result = await response.json()
+                    content = result['choices'][0]['message']['content']
+                    
+                    # Remove code block markers if present
+                    if content.startswith('```json\n'):
+                        content = content[8:]  # Remove ```json\n
+                    if content.endswith('\n```'):
+                        content = content[:-4]  # Remove \n```
+                    
+                    try:
+                        parsed_content = json.loads(content)
+                        print("\nParsed response:")
+                        print(json.dumps(parsed_content, indent=2))
+                        return True
+                    except Exception as e:
+                        print(f"Error parsing response: {str(e)}")
+                        return False
+                else:
+                    print(f"Error: {response.status}")
+                    return False
+                
     except Exception as e:
-        print(f"Error testing Grok API: {str(e)}")
+        print(f"Error connecting to Grok API: {str(e)}")
         return False
 
+async def main():
+    success = await test_grok()
+    if success:
+        print("\nGrok API test successful! ✓")
+    else:
+        print("\nGrok API test failed! ✗")
+
 if __name__ == "__main__":
-    success = test_grok()
-    print(f"\nTest {'successful' if success else 'failed'}") 
+    asyncio.run(main()) 

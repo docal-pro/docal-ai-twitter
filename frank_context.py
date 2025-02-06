@@ -45,11 +45,37 @@ class TweetContextBuilder:
         with open(input_file, 'r') as f:
             self.tweets = json.load(f)
         
+        # Initialize stats based on current progress
         self.stats = {
             "processed_tweets": 0,
             "successful_contexts": 0,
-            "failed_contexts": 0
+            "failed_contexts": 0,
+            "timeout_errors": 0,
+            "other_errors": 0,
+            "api_errors": 0,
+            "rate_limits_hit": 0,
+            "restricted_tweets": 0
         }
+        
+        # Load current progress from output file
+        if os.path.exists(output_file):
+            with open(output_file, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header
+                for row in reader:
+                    self.stats["processed_tweets"] += 1
+                    if len(row) > 4:  # Check if context column exists
+                        if "[This post is unavailable]" in row[4]:
+                            self.stats["failed_contexts"] += 1
+                        elif "[This post was not accessible" in row[4]:
+                            self.stats["failed_contexts"] += 1
+                            self.stats["api_errors"] += 1
+                        elif "[This post is restricted]" in row[4]:
+                            self.stats["restricted_tweets"] += 1
+                        elif "[This post was not accessible due to timeout]" in row[4]:
+                            self.stats["timeout_errors"] += 1
+                        else:
+                            self.stats["successful_contexts"] += 1
         
         # Configuration
         self.config = {
@@ -63,18 +89,9 @@ class TweetContextBuilder:
     def print_stats(self):
         """Print current processing stats"""
         total = len(self.tweets)
-        
-        # Get the actual number of processed tweets from results.csv
-        processed = 0
-        error_count = 0
-        if os.path.exists(self.output_file):
-            with open(self.output_file, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                next(reader)  # Skip header
-                for row in reader:
-                    processed += 1
-                    if len(row) > 4 and "[This post is unavailable]" in row[4]:
-                        error_count += 1
+        processed = self.stats["processed_tweets"]
+        error_count = (self.stats["failed_contexts"] + self.stats["timeout_errors"] + 
+                      self.stats["api_errors"] + self.stats["restricted_tweets"])
         
         progress = (processed / total) * 100 if total > 0 else 0
         error_percentage = (error_count / processed * 100) if processed > 0 else 0
@@ -394,125 +411,105 @@ async def main():
     output_file = './results.csv'
     checkpoint_file = './results_checkpoint.csv'
     processed_ids_file = './processed_ids.json'
+    batch_size = 100  # Process tweets in batches
     
     # Create backup directory if it doesn't exist
     backup_dir = "backups"
     if not os.path.exists(backup_dir):
         os.makedirs(backup_dir)
     
-    while True:  # Main processing loop
-        try:
-            # Create backup of existing files before starting
-            if os.path.exists(output_file):
-                create_backup(output_file)
-            if os.path.exists(checkpoint_file):
-                create_backup(checkpoint_file)
-            
-            # Load all tweets
-            with open(input_file, 'r', encoding='utf-8') as f:
-                tweets = json.load(f)
-            
-            # Load previously processed tweet IDs if they exist
-            processed_ids = set()
-            if os.path.exists(processed_ids_file):
-                with open(processed_ids_file, 'r') as f:
-                    processed_ids = set(json.load(f))
-                print(f"Resuming from checkpoint. Already processed {len(processed_ids)} tweets.")
-            
-            # Filter out already processed tweets
-            tweets_to_process = [t for t in tweets if t['id'] not in processed_ids]
-            print(f"\nFound {len(tweets_to_process)} tweets left to process")
-            
-            processor = TweetContextBuilder(input_file, output_file, limit=len(tweets_to_process))
-            
-            # Always append to preserve history
-            file_exists = os.path.exists(output_file)
-            mode = 'a' if file_exists else 'w'
-            
-            with open(output_file, mode, newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                if not file_exists:  # Only write header for new file
-                    writer.writerow(['tweet_id', 'createdAt', 'text', 'isReply', 'context'])
-            
-            # Process each tweet
-            for i, tweet in enumerate(tweets_to_process, 1):
-                print(f"\nProcessing tweet {i}/{len(tweets_to_process)}:")
-                print(f"Tweet ID: {tweet['id']}")
-                print(f"Created at: {tweet['createdAt']}")
-                print(f"Text: {tweet['text']}")
+    # Load all tweets
+    with open(input_file, 'r', encoding='utf-8') as f:
+        all_tweets = json.load(f)
+    
+    # Load previously processed tweet IDs if they exist
+    processed_ids = set()
+    if os.path.exists(output_file):
+        with open(output_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip header
+            for row in reader:
+                if len(row) > 0:
+                    processed_ids.add(row[0])  # First column is tweet_id
+    
+    # Create output file with header if it doesn't exist
+    if not os.path.exists(output_file):
+        with open(output_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['tweet_id', 'createdAt', 'text', 'isReply', 'context'])
+    
+    # Initialize processor with current progress
+    processor = TweetContextBuilder(input_file, output_file, limit=None)
+    
+    # Filter out already processed tweets
+    tweets_to_process = [t for t in all_tweets if t['id'] not in processed_ids]
+    print(f"\nResuming with {len(tweets_to_process)} tweets left to process")
+    
+    # Process tweets in batches
+    for i in range(0, len(tweets_to_process), batch_size):
+        batch = tweets_to_process[i:i + batch_size]
+        print(f"\nProcessing batch {i//batch_size + 1}/{len(tweets_to_process)//batch_size + 1}")
+        
+        for tweet in batch:
+            try:
+                # Add timeout for entire tweet processing
+                context = await asyncio.wait_for(
+                    processor.build_context_thread(tweet),
+                    timeout=30  # 30 second timeout per tweet
+                )
                 
-                try:
-                    # Add timeout for entire tweet processing
-                    context = await asyncio.wait_for(
-                        processor.build_context_thread(tweet),
-                        timeout=180  # 3 minute timeout per tweet
-                    )
-                    
-                    # Always append to main CSV
-                    with open(output_file, 'a', newline='', encoding='utf-8') as f:
-                        writer = csv.writer(f)
-                        writer.writerow([
-                            tweet['id'],
-                            tweet['createdAt'],
-                            tweet['text'],
-                            'True' if tweet.get('isReply', False) else 'False',
-                            context
-                        ])
-                    
-                    # Update processed count
-                    processor.stats["processed_tweets"] += 1
-                    processor.print_stats()
-                    
-                    # Save progress every 10 tweets
-                    if i % 10 == 0:
-                        if os.path.exists(output_file):
-                            backup_path = create_backup(output_file)
-                            if backup_path:
-                                subprocess.run(['cp', backup_path, checkpoint_file])
-                        
-                        processed_ids.add(tweet['id'])
-                        with open(processed_ids_file, 'w') as f:
-                            json.dump(list(processed_ids), f)
-                        print(f"\nCheckpoint saved after processing {i} tweets")
-                    
-                    processed_ids.add(tweet['id'])
-                    
-                except asyncio.TimeoutError:
-                    print(f"Timeout processing tweet {tweet['id']}, skipping...")
-                    # Update error stats
+                # Append to main CSV
+                with open(output_file, 'a', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        tweet['id'],
+                        tweet['createdAt'],
+                        tweet['text'],
+                        'True' if tweet.get('isReply', False) else 'False',
+                        context
+                    ])
+                
+                # Update processed IDs and save immediately
+                processed_ids.add(tweet['id'])
+                with open(processed_ids_file, 'w') as f:
+                    json.dump(list(processed_ids), f)
+                
+                # Update processed count and stats
+                processor.stats["processed_tweets"] += 1
+                if "[This post is unavailable]" in context:
+                    processor.stats["failed_contexts"] += 1
+                elif "[This post was not accessible" in context:
+                    processor.stats["failed_contexts"] += 1
+                    processor.stats["api_errors"] += 1
+                elif "[This post is restricted]" in context:
+                    processor.stats["restricted_tweets"] += 1
+                elif "[This post was not accessible due to timeout]" in context:
                     processor.stats["timeout_errors"] += 1
-                    processor.stats["processed_tweets"] += 1
-                    processor.print_stats()
-                    # Save progress on timeout
-                    with open(processed_ids_file, 'w') as f:
-                        json.dump(list(processed_ids), f)
-                    continue
-                    
-                except Exception as e:
-                    print(f"Error processing tweet {tweet['id']}: {str(e)}")
-                    # Update error stats
-                    processor.stats["other_errors"] += 1
-                    processor.stats["processed_tweets"] += 1
-                    processor.print_stats()
-                    # Save progress on error
-                    with open(processed_ids_file, 'w') as f:
-                        json.dump(list(processed_ids), f)
-                    continue
+                else:
+                    processor.stats["successful_contexts"] += 1
                 
-                # Add a small delay between tweets
-                if i < len(tweets_to_process):
-                    await asyncio.sleep(1)
-            
-            # If we complete successfully, break the loop
-            break
-            
-        except Exception as e:
-            print(f"\nError in main processing loop: {str(e)}")
-            print("Restarting in 30 seconds...")
-            await asyncio.sleep(30)
-            continue
-
-    # Don't remove checkpoint files, keep them as additional backups
+                processor.print_stats()
+                
+                # Create backup after each tweet
+                backup_path = create_backup(output_file)
+                if backup_path:
+                    subprocess.run(['cp', backup_path, checkpoint_file])
+                
+                # Small delay between tweets
+                await asyncio.sleep(0.5)
+                
+            except asyncio.TimeoutError:
+                print(f"Timeout processing tweet {tweet['id']}, skipping...")
+                processor.stats["timeout_errors"] += 1
+                continue
+            except Exception as e:
+                print(f"Error processing tweet {tweet['id']}: {str(e)}")
+                processor.stats["other_errors"] += 1
+                continue
+        
+        # Add delay between batches
+        await asyncio.sleep(2)
+    
     print("\nProcessing complete! Stats:")
     for key, value in processor.stats.items():
         print(f"{key}: {value}")

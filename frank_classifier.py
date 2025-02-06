@@ -12,6 +12,8 @@ import google.generativeai as genai
 import time
 import sys
 from collections import defaultdict
+import fcntl
+import csv
 
 # Load environment variables
 load_dotenv()
@@ -52,6 +54,9 @@ model_progress = defaultdict(lambda: {
     "last_error": None
 })
 
+# Global file lock for saving progress
+file_lock = asyncio.Lock()
+
 def clear_terminal():
     """Clear the terminal screen"""
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -60,28 +65,38 @@ def print_status_table():
     """Print a clean status table of all models"""
     clear_terminal()
     print("\n=== Model Processing Status ===")
-    print("┌────────────┬──────────────┬─────────────┬─────────────────┐")
-    print("│ Model      │ Progress     │ Status      │ Last Error      │")
-    print("├────────────┼──────────────┼─────────────┼─────────────────┤")
+    print("┌────────────┬──────────────┬─────────────┬────────────────────────────────────────────────┐")
+    print("│ Model      │ Progress     │ Status      │ Last Error                                     │")
+    print("├────────────┼──────────────┼─────────────┼────────────────────────────────────────────────┤")
     
     for model in sorted(model_progress.keys()):
         progress = model_progress[model]
         progress_str = f"{progress['processed']}/{progress['total']}"
         status = progress['status']
         error = progress['last_error']
-        if error and len(error) > 14:
-            error = error[:11] + "..."
+        
+        # Format error message to be more readable
+        if error:
+            # Try to extract more meaningful part of the error
+            if isinstance(error, str):
+                if "400 - " in error:
+                    error = error.split("400 - ", 1)[1]
+                if "message" in error.lower() and ":" in error:
+                    error = error.split(":", 1)[1].strip()
+                # Remove quotes and curly braces
+                error = error.replace("{", "").replace("}", "").replace('"', "")
+                error = error[:45] + "..." if len(error) > 45 else error
         error_str = error if error else ""
         
-        # Pad model name to 10 chars, progress to 12 chars, status to 11 chars, error to 15 chars
+        # Pad model name to 10 chars, progress to 12 chars, status to 11 chars, error to 45 chars
         model_str = f"{model:10}"
         progress_str = f"{progress_str:12}"
         status_str = f"{status:11}"
-        error_str = f"{error_str:15}"
+        error_str = f"{error_str:45}"
         
         print(f"│ {model_str} │ {progress_str} │ {status_str} │ {error_str} │")
     
-    print("└────────────┴──────────────┴─────────────┴─────────────────┘")
+    print("└────────────┴──────────────┴─────────────┴────────────────────────────────────────────────┘")
     sys.stdout.flush()
 
 def retry_with_backoff(func, *args, max_retries=3, initial_delay=1):
@@ -349,9 +364,18 @@ def get_grok_prediction(context: str) -> tuple[str, str]:
         return classification, reasoning
     
     try:
-        return retry_with_backoff(_make_request)
+        return retry_with_backoff(_make_request, max_retries=3, initial_delay=2)
     except Exception as e:
         return "Error", str(e)
+
+async def save_progress(df: pd.DataFrame, output_file: str):
+    """Save progress with file locking to prevent concurrent writes"""
+    async with file_lock:
+        # Create a temporary file
+        temp_file = f"{output_file}.tmp"
+        df.to_csv(temp_file, index=False, quoting=csv.QUOTE_ALL)
+        # Atomically replace the original file
+        os.replace(temp_file, output_file)
 
 async def process_model(model_name: str, model_func, tweets_to_process: List[Tuple[int, str]], df: pd.DataFrame, output_file: str):
     """Process all tweets for a single model"""
@@ -369,10 +393,12 @@ async def process_model(model_name: str, model_func, tweets_to_process: List[Tup
         "last_error": None
     }
     print_status_table()
+    print(f"\nStarting {model_name} model processing...")
     
     error_count = 0
     auth_error = False
     quota_error = False
+    rate_limit_count = 0
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         for idx, context in tweets_to_process:
@@ -381,71 +407,91 @@ async def process_model(model_name: str, model_func, tweets_to_process: List[Tup
                 if auth_error or quota_error:
                     continue
                     
+                print(f"\nProcessing tweet {idx+1} with {model_name}...")
                 pred, reason = await asyncio.get_event_loop().run_in_executor(executor, model_func, context)
                 
                 # Skip if we got an error response
                 if pred == "Error":
                     error_str = reason.lower()
                     model_progress[model_name]["last_error"] = reason
+                    print(f"\nError from {model_name}: {reason}")
                     
                     # Check for auth/quota errors
                     if "401" in error_str or "unauthorized" in error_str:
                         auth_error = True
                         model_progress[model_name]["status"] = "Auth ❌"
                         print_status_table()
+                        await save_progress(df, output_file)
                         return
                     elif "quota" in error_str or "credit" in error_str:
                         quota_error = True
                         model_progress[model_name]["status"] = "Quota ❌"
                         print_status_table()
+                        await save_progress(df, output_file)
                         return
+                    elif "429" in error_str or "rate limit" in error_str:
+                        rate_limit_count += 1
+                        if rate_limit_count >= 3 and model_name == 'grok':
+                            cooldown_minutes = 15
+                            print(f"\nGrok rate limited. Pausing for {cooldown_minutes} minutes...")
+                            model_progress[model_name]["status"] = f"Cooling {cooldown_minutes}m"
+                            print_status_table()
+                            await save_progress(df, output_file)
+                            await asyncio.sleep(cooldown_minutes * 60)
+                            rate_limit_count = 0
+                            model_progress[model_name]["status"] = "Running"
+                            print_status_table()
+                            continue
                     
                     error_count += 1
-                    if error_count >= 5:  # Stop after 5 errors
+                    if error_count >= 5:
+                        print(f"\n{model_name} failed after 5 errors. Last error: {reason}")
                         model_progress[model_name]["status"] = "Failed ❌"
                         print_status_table()
+                        await save_progress(df, output_file)
                         return
                     continue
-                    
+                
+                # Reset rate limit count on successful request
+                rate_limit_count = 0
+                
                 df.at[idx, f'prediction_{model_name}'] = pred
                 df.at[idx, f'reasoning_{model_name}'] = reason
                 
-                # Update progress (count total completed predictions)
+                print(f"{model_name} prediction: {pred}")
+                print(f"Reasoning: {reason}")
+                
+                # Update progress
                 has_prediction = ~df[f'prediction_{model_name}'].isna()
                 model_progress[model_name]["processed"] = sum(has_prediction)
                 
-                # Save after every prediction for Gemini
-                if model_name == 'gemini':
-                    df.to_csv(output_file, index=False)
-                # Save every 2 predictions for other models
-                elif model_progress[model_name]["processed"] % 2 == 0:
-                    df.to_csv(output_file, index=False)
+                if model_progress[model_name]["processed"] % 5 == 0:
+                    await save_progress(df, output_file)
                 
-                # Update consensus prediction after each model update
                 df['consensus_prediction'] = calculate_consensus_prediction(df)
-                
                 print_status_table()
                     
             except Exception as e:
                 error_str = str(e)
+                print(f"\nUnexpected error from {model_name}: {error_str}")
                 model_progress[model_name]["last_error"] = error_str
                 error_count += 1
+                
                 if error_count >= 5:
+                    print(f"\n{model_name} failed after 5 unexpected errors. Last error: {error_str}")
                     model_progress[model_name]["status"] = "Failed ❌"
                     print_status_table()
+                    await save_progress(df, output_file)
                     return
                 continue
-            
-            # Save progress after each prediction (for Gemini)
-            if model_name == 'gemini':
-                df.to_csv(output_file, index=False)
     
     model_progress[model_name]["status"] = "Complete ✓"
     print_status_table()
+    await save_progress(df, output_file)
 
 def calculate_consensus_prediction(df: pd.DataFrame) -> pd.Series:
     """Calculate consensus prediction based on majority vote from all models"""
-    models = ['deepseek', 'gpt4', 'claude', 'gemini', 'perplexity', 'grok']
+    models = ['gpt4', 'claude', 'gemini', 'perplexity', 'grok']  # Removed deepseek
     
     def get_consensus(row):
         # Get all predictions for this row
@@ -469,7 +515,7 @@ def calculate_consensus_prediction(df: pd.DataFrame) -> pd.Series:
         # If less than half vote for Prediction
         elif prediction_count < total_votes/2:
             return "Not Prediction"
-        # If it's a tie (3/6), use Perplexity's vote
+        # If it's a tie, use Perplexity's vote
         else:
             perplexity_vote = row['prediction_perplexity']
             return perplexity_vote if pd.notna(perplexity_vote) else None
@@ -478,12 +524,76 @@ def calculate_consensus_prediction(df: pd.DataFrame) -> pd.Series:
 
 async def classify_tweets_async(input_file: str, output_file: str):
     """Main function to classify tweets using multiple LLMs independently"""
-    input_df = pd.read_csv(input_file)
+    # Read input file with more robust parsing
+    input_df = pd.read_csv(input_file, quoting=csv.QUOTE_ALL, escapechar='\\', on_bad_lines='warn')
+    
+    # Drop any unnamed columns from input
+    unnamed_cols = [col for col in input_df.columns if 'Unnamed:' in col]
+    if unnamed_cols:
+        print(f"Dropping unnamed columns from input: {unnamed_cols}")
+        input_df = input_df.drop(columns=unnamed_cols)
+    
     total_tweets = len(input_df)
     
     try:
-        df = pd.read_csv(output_file)
+        # Load existing progress with more robust parsing
+        df = pd.read_csv(output_file, quoting=csv.QUOTE_ALL, escapechar='\\', on_bad_lines='warn')
+        print(f"\nLoaded existing progress from {output_file}")
+        
+        # Drop any unnamed columns from output
+        unnamed_cols = [col for col in df.columns if 'Unnamed:' in col]
+        if unnamed_cols:
+            print(f"Dropping unnamed columns from output: {unnamed_cols}")
+            df = df.drop(columns=unnamed_cols)
+        
+        # Verify we have all the original tweets
+        if len(df) != total_tweets:
+            print(f"\nWarning: Output file has {len(df)} tweets but input has {total_tweets}")
+            print("Using input file as base and copying over existing predictions...")
+            # Create a new DataFrame with all input tweets
+            new_df = input_df.copy()
+            
+            # Function to normalize context text
+            def normalize_text(text):
+                if pd.isna(text):
+                    return text
+                # Remove extra whitespace and normalize newlines
+                return ' '.join(str(text).strip().split())
+            
+            # Create a mapping key - if tweet_id exists in both, use it, otherwise use normalized context
+            if 'tweet_id' in df.columns and 'tweet_id' in new_df.columns:
+                print("Using tweet_id for mapping predictions")
+                df['key'] = df['tweet_id'].astype(str)
+                new_df['key'] = new_df['tweet_id'].astype(str)
+            else:
+                print("Using normalized context for mapping predictions")
+                df['key'] = df['context'].apply(normalize_text)
+                new_df['key'] = new_df['context'].apply(normalize_text)
+            
+            # Copy over existing predictions for each model
+            for model in ['deepseek', 'gpt4', 'claude', 'gemini', 'perplexity', 'grok']:
+                if f'prediction_{model}' in df.columns:
+                    # Create a mapping using the key
+                    pred_map = pd.Series(df[f'prediction_{model}'].values, index=df['key']).to_dict()
+                    reason_map = pd.Series(df[f'reasoning_{model}'].values, index=df['key']).to_dict()
+                    
+                    # Map the predictions/reasoning to the new DataFrame
+                    new_df[f'prediction_{model}'] = new_df['key'].map(pred_map)
+                    new_df[f'reasoning_{model}'] = new_df['key'].map(reason_map)
+                    
+                    # Count non-null predictions
+                    completed = new_df[f'prediction_{model}'].notna().sum()
+                    print(f"Copied {completed} predictions for {model}")
+            
+            # Remove the temporary key column
+            new_df = new_df.drop('key', axis=1)
+            df = new_df
+            
+            # Save the corrected DataFrame immediately
+            df.to_csv(output_file, index=False)
+            
     except FileNotFoundError:
+        print(f"\nNo existing progress found, starting fresh")
         df = input_df.copy()
         
     # Initialize consensus column if it doesn't exist
@@ -492,19 +602,21 @@ async def classify_tweets_async(input_file: str, output_file: str):
     
     # Initialize columns if they don't exist
     models = {
-        'deepseek': get_deepseek_prediction,
-        'gpt4': get_gpt4_prediction,
-        'claude': get_claude_prediction,
-        'gemini': get_gemini_prediction,
-        'perplexity': get_perplexity_prediction,
         'grok': get_grok_prediction
     }
     
     # Initialize progress for all models with total_tweets as denominator
     for model in models.keys():
+        # Initialize prediction columns if they don't exist
+        if f'prediction_{model}' not in df.columns:
+            df[f'prediction_{model}'] = None
+            df[f'reasoning_{model}'] = None
+            print(f"Initialized columns for {model}")
+            
         # Count how many predictions we already have
         has_prediction = ~df[f'prediction_{model}'].isna()
         completed = sum(has_prediction)
+        print(f"Found {completed} existing predictions for {model}")
         
         model_progress[model] = {
             "processed": completed,
@@ -515,6 +627,15 @@ async def classify_tweets_async(input_file: str, output_file: str):
     
     # Calculate initial consensus for existing predictions
     df['consensus_prediction'] = calculate_consensus_prediction(df)
+    
+    # Ensure proper column ordering with tweet_id first if it exists
+    if 'tweet_id' in df.columns:
+        cols = ['tweet_id'] + [col for col in df.columns if col != 'consensus_prediction' and col != 'tweet_id'] + ['consensus_prediction']
+    else:
+        cols = [col for col in df.columns if col != 'consensus_prediction'] + ['consensus_prediction']
+    df = df[cols]
+    
+    # Save with consensus column
     df.to_csv(output_file, index=False)
     
     print_status_table()
@@ -522,12 +643,14 @@ async def classify_tweets_async(input_file: str, output_file: str):
     # Create tasks for each model with their pending tweets
     tasks = []
     for model_name, model_func in models.items():
-        # Find tweets that need this model's prediction
+        # Find tweets that need this model's prediction, starting from index 6878
         needs_processing = df[f'prediction_{model_name}'].isna()
         tweets_to_process = [(idx, row['context']) 
-                           for idx, row in df[needs_processing].iterrows()]
+                           for idx, row in df[needs_processing].iterrows()
+                           if idx >= 6878]  # Only process tweets from index 6878 onwards
         
         if tweets_to_process:
+            print(f"\nStarting {model_name} with {len(tweets_to_process)} tweets to process")
             tasks.append(process_model(model_name, model_func, tweets_to_process, df, output_file))
     
     if tasks:
@@ -565,6 +688,16 @@ async def classify_tweets_async(input_file: str, output_file: str):
                 else:
                     print("\nStopping all processing...")
                     return
+    
+    # Final consensus calculation and save
+    df['consensus_prediction'] = calculate_consensus_prediction(df)
+    # Ensure proper column ordering with tweet_id first if it exists
+    if 'tweet_id' in df.columns:
+        cols = ['tweet_id'] + [col for col in df.columns if col != 'consensus_prediction' and col != 'tweet_id'] + ['consensus_prediction']
+    else:
+        cols = [col for col in df.columns if col != 'consensus_prediction'] + ['consensus_prediction']
+    df = df[cols]
+    df.to_csv(output_file, index=False)
     
     print("\nProcessing complete!")
 
