@@ -491,7 +491,10 @@ async def process_model(model_name: str, model_func, tweets_to_process: List[Tup
 
 def calculate_consensus_prediction(df: pd.DataFrame) -> pd.Series:
     """Calculate consensus prediction based on majority vote from all models"""
-    models = ['gpt4', 'claude', 'gemini', 'perplexity', 'grok']  # Removed deepseek
+    ## Removed: 
+    # DeepSeek - Credits temporarily disabled by DeepSeek
+    # Grok - xAI credits broken
+    models = ['gpt4', 'claude', 'gemini', 'perplexity']
     
     def get_consensus(row):
         # Get all predictions for this row
