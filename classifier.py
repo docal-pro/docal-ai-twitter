@@ -18,14 +18,14 @@ import csv
 # Load environment variables
 load_dotenv()
 
-# Initialize API clients
+# Initialise API clients
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 GROK_API_KEY = os.getenv("GROK_API_KEY")
 
-SYSTEM_PROMPT = """You are analyzing tweets from @frankdegods. Your task is to determine if the tweet contains a prediction about the crypto market.
+SYSTEM_PROMPT = """You are analysing tweets from @frankdegods. Your task is to determine if the tweet contains a prediction about the crypto market.
 
 Classify as 'Prediction' ONLY if @frankdegods is explicitly expressing a directional view (bullish/bearish) about:
 1. Specific tokens (tradable crypto tokens like $BTC, $ETH, $HYPE)
@@ -130,7 +130,7 @@ def get_deepseek_prediction(context: str) -> tuple[str, str]:
     """Get prediction using DeepSeek R1"""
     def _make_request():
         if not os.getenv("DEEPSEEK_API_KEY"):
-            raise Exception("401 Unauthorized - DeepSeek API key not found")
+            raise Exception("401 Unauthorised - DeepSeek API key not found")
             
         headers = {
             "Authorization": f"Bearer {os.getenv('DEEPSEEK_API_KEY')}",
@@ -195,7 +195,7 @@ def get_claude_prediction(context: str) -> tuple[str, str]:
     """Get prediction using Claude Opus"""
     def _make_request():
         if not os.getenv("ANTHROPIC_API_KEY"):
-            raise Exception("401 Unauthorized - Claude API key not found")
+            raise Exception("401 Unauthorised - Claude API key not found")
             
         response = anthropic_client.messages.create(
             model="claude-3-opus-20240229",
@@ -227,7 +227,7 @@ def get_gemini_prediction(context: str) -> tuple[str, str]:
     """Get prediction using Google Gemini"""
     def _make_request():
         if not os.getenv("GOOGLE_API_KEY"):
-            raise Exception("401 Unauthorized - Gemini API key not found")
+            raise Exception("401 Unauthorised - Gemini API key not found")
             
         model = genai.GenerativeModel('gemini-pro')
         
@@ -260,7 +260,7 @@ def get_gemini_prediction(context: str) -> tuple[str, str]:
             ]
             
             # Create a structured prompt
-            prompt = f"""TASK: Analyze if this tweet contains a crypto market prediction.
+            prompt = f"""TASK: Analyse if this tweet contains a crypto market prediction.
 
 TWEET: {context}
 
@@ -313,7 +313,7 @@ def get_perplexity_prediction(context: str) -> tuple[str, str]:
     """Get prediction using Perplexity Sonar Pro"""
     def _make_request():
         if not PERPLEXITY_API_KEY:
-            raise Exception("401 Unauthorized - Perplexity API key not found")
+            raise Exception("401 Unauthorised - Perplexity API key not found")
             
         headers = {
             "Authorization": f"Bearer {PERPLEXITY_API_KEY}",
@@ -556,22 +556,22 @@ async def classify_tweets_async(input_file: str, output_file: str):
             # Create a new DataFrame with all input tweets
             new_df = input_df.copy()
             
-            # Function to normalize context text
-            def normalize_text(text):
+            # Function to normalise context text
+            def normalise_text(text):
                 if pd.isna(text):
                     return text
-                # Remove extra whitespace and normalize newlines
+                # Remove extra whitespace and normalise newlines
                 return ' '.join(str(text).strip().split())
             
-            # Create a mapping key - if tweet_id exists in both, use it, otherwise use normalized context
+            # Create a mapping key - if tweet_id exists in both, use it, otherwise use normalised context
             if 'tweet_id' in df.columns and 'tweet_id' in new_df.columns:
                 print("Using tweet_id for mapping predictions")
                 df['key'] = df['tweet_id'].astype(str)
                 new_df['key'] = new_df['tweet_id'].astype(str)
             else:
-                print("Using normalized context for mapping predictions")
-                df['key'] = df['context'].apply(normalize_text)
-                new_df['key'] = new_df['context'].apply(normalize_text)
+                print("Using normalised context for mapping predictions")
+                df['key'] = df['context'].apply(normalise_text)
+                new_df['key'] = new_df['context'].apply(normalise_text)
             
             # Copy over existing predictions for each model
             for model in ['deepseek', 'gpt4', 'claude', 'gemini', 'perplexity', 'grok']:
@@ -599,22 +599,22 @@ async def classify_tweets_async(input_file: str, output_file: str):
         print(f"\nNo existing progress found, starting fresh")
         df = input_df.copy()
         
-    # Initialize consensus column if it doesn't exist
+    # Initialise consensus column if it doesn't exist
     if 'consensus_prediction' not in df.columns:
         df['consensus_prediction'] = None
     
-    # Initialize columns if they don't exist
+    # Initialise columns if they don't exist
     models = {
         'grok': get_grok_prediction
     }
     
-    # Initialize progress for all models with total_tweets as denominator
+    # Initialise progress for all models with total_tweets as denominator
     for model in models.keys():
-        # Initialize prediction columns if they don't exist
+        # Initialise prediction columns if they don't exist
         if f'prediction_{model}' not in df.columns:
             df[f'prediction_{model}'] = None
             df[f'reasoning_{model}'] = None
-            print(f"Initialized columns for {model}")
+            print(f"Initialised columns for {model}")
             
         # Count how many predictions we already have
         has_prediction = ~df[f'prediction_{model}'].isna()
@@ -705,6 +705,6 @@ async def classify_tweets_async(input_file: str, output_file: str):
     print("\nProcessing complete!")
 
 if __name__ == "__main__":
-    input_file = "/Users/davidlin/Desktop/results.csv"
-    output_file = "/Users/davidlin/Desktop/classified_results.csv"
+    input_file = "./results/results_frank.csv"
+    output_file = "./results/classified_results_frank.csv"
     asyncio.run(classify_tweets_async(input_file, output_file))

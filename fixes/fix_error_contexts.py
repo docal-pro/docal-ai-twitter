@@ -11,29 +11,29 @@ def fix_error_contexts():
         affected_ids = set(line.strip() for line in f)
     print(f"Loaded {len(affected_ids)} affected tweet IDs")
     
-    # Load tweet data from frank_tweets.json for original text
-    print("\nLoading frank_tweets.json...")
-    with open('frank_tweets.json', 'r') as f:
+    # Load tweet data from tweets/tweets_frank.json for original text
+    print("\nLoading tweets/tweets_frank.json...")
+    with open('tweets/tweets_frank.json', 'r') as f:
         tweets = json.loads(f.read(), parse_int=str)
     
     # Create mapping of ID to tweet data
     id_to_tweet = {tweet['id']: tweet for tweet in tweets}
     print(f"Loaded {len(id_to_tweet)} tweets")
     
-    # Create backup of original results.csv
+    # Create backup of original results/results_frank.csv
     backup_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_file = f'backups/results.csv.{backup_time}.bak'
+    backup_file = f'backups/results_frank.csv.{backup_time}.bak'
     os.makedirs('backups', exist_ok=True)
-    shutil.copy2('results.csv', backup_file)
+    shutil.copy2('results/results_frank.csv', backup_file)
     print(f"\nCreated backup at {backup_file}")
     
-    # Read existing results.csv and create new version with fixed error messages
-    print("Processing results.csv...")
+    # Read existing results_frank.csv and create new version with fixed error messages
+    print("Processing results/results_frank.csv...")
     rows_processed = 0
     errors_fixed = 0
     
-    with open('results.csv', 'r') as f_in, \
-         open('results_with_fixed_errors.csv', 'w', newline='') as f_out:
+    with open('results/results_frank.csv', 'r') as f_in, \
+         open('results/results_with_fixed_errors_frank.csv', 'w', newline='') as f_out:
         reader = csv.reader(f_in)
         writer = csv.writer(f_out)
         
@@ -77,8 +77,8 @@ def fix_error_contexts():
     print(f"Total errors fixed: {errors_fixed}")
     
     # Replace original file with new version
-    os.replace('results_with_fixed_errors.csv', 'results.csv')
-    print("Updated results.csv with fixed error messages")
+    os.replace('results/results_with_fixed_errors_frank.csv', 'results/results_frank.csv')
+    print("Updated results/results_frank.csv with fixed error messages")
 
 if __name__ == "__main__":
     fix_error_contexts() 

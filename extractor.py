@@ -25,7 +25,7 @@ from collections import defaultdict
 # Load environment variables
 load_dotenv()
 
-# Initialize API clients
+# Initialise API clients
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -49,7 +49,7 @@ CACHE_DIR = "cache"
 MAX_RETRIES = 3
 RATE_LIMIT_PAUSE = 1  # seconds
 
-# Token mappings for standardization
+# Token mappings for standardisation
 TOKEN_MAPPINGS = {
     'BITCOIN': 'BTC',
     'SACKS': 'SACKS',  # Keep as is but ensure $ prefix
@@ -61,7 +61,7 @@ TOKEN_MAPPINGS = {
 COINGECKO_CATEGORIES = {
     "artificial-intelligence": "AI",
     "non-fungible-tokens-nft": "NFTs",
-    "decentralized-finance-defi": "DeFi",
+    "decentralised-finance-defi": "DeFi",
     "layer-1": "L1",
     "layer-2": "L2",
     "meme-token": "Memes",
@@ -76,7 +76,7 @@ COINGECKO_CATEGORIES = {
 META_CATEGORIES = [
     "AI",           # Artificial Intelligence
     "NFTs",         # Non-Fungible Tokens
-    "DeFi",         # Decentralized Finance
+    "DeFi",         # Decentralised Finance
     "L1",           # Layer 1
     "L2",           # Layer 2
     "Memes",        # Meme Coins
@@ -94,16 +94,16 @@ PROJECT_MAPPINGS = {
     # Add more project mappings as needed
 }
 
-SYSTEM_PROMPT = """You are analyzing tweets from @frankdegods to extract the target of his predictions and their sentiment. The target can be:
+SYSTEM_PROMPT = """You are analysing tweets from @frankdegods to extract the target of his predictions and their sentiment. The target can be:
 
 1. Specific tokens (tradable crypto tokens like $BTC, $ETH, $HYPE)
 2. Projects (twitter accounts working in web3 without tokens yet)
 3. Metas (crypto narratives aligned with CoinGecko categories: AI, NFTs, DeFi, L1, L2, Memes, RWA, Social Fi, GameFi, BTC, ICO)
 
 For each prediction, identify ALL targets mentioned and whether Frank is bullish or bearish on them.
-- For tokens, use standardized symbols (e.g., $BTC instead of $BITCOIN)
+- For tokens, use standardised symbols (e.g., $BTC instead of $BITCOIN)
 - For projects without tokens, return "None"
-- For metas, use only the standardized categories listed above
+- For metas, use only the standardised categories listed above
 
 Return your response in this exact JSON format:
 {
@@ -129,10 +129,12 @@ model_progress = defaultdict(lambda: {
     "last_error": None
 })
 
-def initialize_model_progress(prediction_count: int, start_idx: int = 0):
-    """Initialize progress tracking for all models"""
+def initialise_model_progress(prediction_count: int, start_idx: int = 0):
+    """Initialise progress tracking for all models"""
     global model_progress
-    base_models = ['gpt4', 'claude', 'gemini', 'perplexity', 'grok']
+    ## Removed: 
+    # Grok - xAI credits broken
+    base_models = ['gpt4', 'claude', 'gemini', 'perplexity']
     model_progress.clear()  # Clear existing progress
     
     for model in base_models:
@@ -220,7 +222,7 @@ async def get_deepseek_prediction(text: str, timestamp: datetime) -> Dict:
     """Get prediction target using DeepSeek"""
     def _make_request():
         if not os.getenv("DEEPSEEK_API_KEY"):
-            raise Exception("401 Unauthorized - DeepSeek API key not found")
+            raise Exception("401 Unauthorised - DeepSeek API key not found")
             
         headers = {
             "Authorization": f"Bearer {os.getenv('DEEPSEEK_API_KEY')}",
@@ -555,7 +557,7 @@ class TargetExtractor:
                     market_data = None
                     
                     if target['type'] == 'token':
-                        # Standardize token names
+                        # Standardise token names
                         token_name = formatted_name.upper().replace('$', '')
                         token_name = TOKEN_MAPPINGS.get(token_name, token_name)
                         formatted_name = f"${token_name}"
@@ -755,9 +757,11 @@ class TargetExtractor:
                         print("Warning: Checkpoint mismatch. Starting from beginning.")
                         start_idx = 0
             
-            # Initialize progress for Gemini and Grok only
+            # Initialise progress for Gemini and Grok only
             model_progress.clear()
-            base_models = ['gemini', 'grok']
+            ## Removed: 
+            # Grok - xAI credits broken
+            base_models = ['gemini']
             for model in base_models:
                 model_progress[model] = {
                     "processed": 0,
@@ -767,7 +771,7 @@ class TargetExtractor:
                 }
             print_status_table()
             
-            # Initialize output DataFrame with correct column structure
+            # Initialise output DataFrame with correct column structure
             column_order = [
                 'tweet_id', 
                 'createdAt', 
@@ -866,7 +870,7 @@ class TargetExtractor:
 
 async def check_files():
     print("\nChecking files and configuration...")
-    input_file = "/Users/davidlin/Desktop/classified_results.csv"
+    input_file = "./results/classified_results_frank.csv"
     if not os.path.exists(input_file):
         print(f"Input file not found: {input_file}")
         return False
@@ -903,13 +907,15 @@ async def check_files():
         predictions_df = predictions_df.sort_values('createdAt')
         
         # Save filtered predictions
-        cleaned_file = "/Users/davidlin/Desktop/cleaned_results.csv"
+        cleaned_file = "./results/cleaned_results_frank.csv"
         print(f"Saving filtered predictions to: {cleaned_file}")
         predictions_df.to_csv(cleaned_file, index=False)
         
-        # Initialize progress tracking with fresh counters - only for Gemini and Grok
+        # Initialise progress tracking with fresh counters - only for Gemini and Grok
         model_progress.clear()  # Clear existing progress
-        for model in ['gemini', 'grok']:
+        ## Removed: 
+        # Grok - xAI credits broken
+        for model in ['gemini']:
             model_progress[model] = {
                 "processed": 0,
                 "total": prediction_count,
@@ -928,14 +934,14 @@ async def main():
     print("\nStarting extraction process...")
     
     if not await check_files():
-        print("Initialization checks failed. Exiting...")
+        print("Initialisation checks failed. Exiting...")
         return
     
     try:
-        print("\nInitializing extractor...")
+        print("\nInitialising extractor...")
         extractor = TargetExtractor()
-        input_file = "/Users/davidlin/Desktop/classified_results.csv"
-        output_file = "/Users/davidlin/Desktop/extracted_results.csv"
+        input_file = "./results/classified_results_frank.csv"
+        output_file = "./results/extracted_results_frank.csv"
         print(f"\nProcessing file: {input_file}")
         print(f"Output will be saved to: {output_file}")
         await extractor.process_file(input_file, output_file)

@@ -13,7 +13,7 @@ import random
 # Load environment variables
 load_dotenv()
 
-class CryptoConsensusAnalyzer:
+class CryptoConsensusAnalyser:
     def __init__(self):
         self.api_key = os.getenv('COINGECKO_API_KEY')
         if not self.api_key:
@@ -80,7 +80,7 @@ class CryptoConsensusAnalyzer:
             'rwa': 'real-world-assets',
             'realworldassets': 'real-world-assets',
             'agi': 'ai-artificial-intelligence',
-            'defi': 'decentralized-finance-defi',
+            'defi': 'decentralised-finance-defi',
             'gaming': 'gaming',
             'metaverse': 'metaverse',
             'layer1': 'layer-1',
@@ -410,11 +410,11 @@ class CryptoConsensusAnalyzer:
         sys.stdout.flush()
 
 def main():
-    input_file = os.path.expanduser("~/Desktop/extracted_results.csv")
-    output_file = os.path.expanduser("~/Desktop/evaluated_results.csv")
+    input_file = os.path.expanduser("./results/extracted_results_frank.csv")
+    output_file = os.path.expanduser("./results/evaluated_results_frank.csv")
     
-    print("\nInitializing analyzer...")
-    analyzer = CryptoConsensusAnalyzer()
+    print("\nInitialising analyser...")
+    analyser = CryptoConsensusAnalyser()
     
     try:
         # Read input file
@@ -424,7 +424,7 @@ def main():
         
         # Process all predictions
         print("\nStarting prediction processing...")
-        results_df = analyzer.process_predictions(df, output_file)
+        results_df = analyser.process_predictions(df, output_file)
         print("\nProcessing complete!")
         
         if os.path.exists(output_file):

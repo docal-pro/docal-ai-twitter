@@ -3,19 +3,19 @@ import csv
 from typing import Dict, List
 import os
 
-def analyze_tweet_contexts():
-    """Analyze tweets to count replies and check for contexts that match tweet text."""
+def analyse_tweet_contexts():
+    """Analyse tweets to count replies and check for contexts that match tweet text."""
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
-    # Load tweet data from frank_tweets.json
-    with open(os.path.join(parent_dir, 'frank_tweets.json'), 'r') as f:
+    # Load tweet data from tweets/tweets_frank.json
+    with open(os.path.join(parent_dir, 'tweets/tweets_frank.json'), 'r') as f:
         all_tweets = json.load(f)
     
     # Load results data
-    with open(os.path.join(parent_dir, 'results.csv'), 'r') as f:
+    with open(os.path.join(parent_dir, 'results/results_frank.csv'), 'r') as f:
         reader = csv.reader(f)
         header = next(reader)
-        results = list(reader)
+        results = list(reader)prompt
     
     # Create mapping of tweet IDs to their results
     results_map = {row[0]: row for row in results}
@@ -25,7 +25,7 @@ def analyze_tweet_contexts():
     frank_prefix_contexts = 0
     other_contexts = 0
     
-    print("\nAnalyzing tweet contexts...")
+    print("\nAnalysing tweet contexts...")
     for tweet in all_tweets:
         tweet_id = tweet['id']
         tweet_text = tweet['text'].strip()
@@ -68,8 +68,8 @@ def analyze_tweet_contexts():
     print(f"\nAnalysis Results:")
     print(f"Total replies: {reply_count}")
     print(f"Contexts marked as TRUE: {true_contexts} ({(true_contexts/reply_count*100):.1f}%)")
-    print(f"Contexts with @frankdegods prefix: {frank_prefix_contexts} ({(frank_prefix_contexts/reply_count*100):.1f}%)")
+    print(f"Contexts with @ prefix: {frank_prefix_contexts} ({(frank_prefix_contexts/reply_count*100):.1f}%)")
     print(f"Other contexts: {other_contexts} ({(other_contexts/reply_count*100):.1f}%)")
 
 if __name__ == "__main__":
-    analyze_tweet_contexts() 
+    analyse_tweet_contexts() 

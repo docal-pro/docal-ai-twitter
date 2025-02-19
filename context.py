@@ -41,11 +41,11 @@ class TweetContextBuilder:
         self.browser = None
         self.page = None
         
-        # Load tweets at initialization
+        # Load tweets at initialisation
         with open(input_file, 'r') as f:
             self.tweets = json.load(f)
         
-        # Initialize stats based on current progress
+        # Initialise stats based on current progress
         self.stats = {
             "processed_tweets": 0,
             "successful_contexts": 0,
@@ -108,10 +108,10 @@ class TweetContextBuilder:
         print()
 
     def init_stats(self):
-        """Initialize stats from historical data"""
+        """Initialise stats from historical data"""
         if os.path.exists(self.output_file):
             try:
-                print("\nAnalyzing existing output file...")
+                print("\nAnalysing existing output file...")
                 with open(self.output_file, 'r', encoding='utf-8') as f:
                     reader = csv.reader(f)
                     next(reader)  # Skip header
@@ -125,7 +125,7 @@ class TweetContextBuilder:
                 traceback.print_exc()
 
     async def init_browser(self):
-        """Initialize the browser"""
+        """Initialise the browser"""
         if not self.browser:
             self.browser = await launch(
                 headless=True,
@@ -143,17 +143,17 @@ class TweetContextBuilder:
 
     def handle_circular_refs(self, obj):
         seen = set()
-        def serialize(obj):
+        def serialise(obj):
             obj_id = id(obj)
             if obj_id in seen:
                 return '[Circular]'
             seen.add(obj_id)
             if isinstance(obj, dict):
-                return {k: serialize(v) for k, v in obj.items()}
+                return {k: serialise(v) for k, v in obj.items()}
             elif isinstance(obj, list):
-                return [serialize(item) for item in obj]
+                return [serialise(item) for item in obj]
             return obj
-        return serialize(obj)
+        return serialise(obj)
 
     async def get_tweet_with_agent(self, tweet_id: str) -> Optional[Dict]:
         """Try to get tweet using agent-twitter-client"""
@@ -407,10 +407,10 @@ class TweetContextBuilder:
                 traceback.print_exc()
 
 async def main():
-    input_file = './frank_tweets.json'
-    output_file = './results.csv'
-    checkpoint_file = './results_checkpoint.csv'
-    processed_ids_file = './processed_ids.json'
+    input_file = './tweets/tweets_frank.json'
+    output_file = './results/results_frank.csv'
+    checkpoint_file = './results/results_checkpoint_frank.csv'
+    processed_ids_file = './results/processed_ids_frank.json'
     batch_size = 100  # Process tweets in batches
     
     # Create backup directory if it doesn't exist
@@ -438,7 +438,7 @@ async def main():
             writer = csv.writer(f)
             writer.writerow(['tweet_id', 'createdAt', 'text', 'isReply', 'context'])
     
-    # Initialize processor with current progress
+    # Initialise processor with current progress
     processor = TweetContextBuilder(input_file, output_file, limit=None)
     
     # Filter out already processed tweets

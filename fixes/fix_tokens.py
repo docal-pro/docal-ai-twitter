@@ -100,7 +100,7 @@ def get_current_price(token_id: str, max_retries=3) -> float:
     return None
 
 # Read the CSV file
-df = pd.read_csv(os.path.expanduser("~/Desktop/evaluated_results.csv"))
+df = pd.read_csv(os.path.expanduser("./results/evaluated_results_frank.csv"))
 
 # First process specific tweet IDs
 for tweet_id, fix_info in specific_fixes.items():
@@ -155,5 +155,5 @@ for index, row in df.iterrows():
             print("Failed to get prices")
 
 # Save the updated file
-df.to_csv(os.path.expanduser("~/Desktop/evaluated_results.csv"), index=False)
+df.to_csv(os.path.expanduser("./results/evaluated_results_frank.csv"), index=False)
 print("\nUpdates complete!") 

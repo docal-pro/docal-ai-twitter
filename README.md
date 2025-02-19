@@ -1,16 +1,20 @@
-# Frank Analyzer
+# `OCSCO`: `On-Chain Social Credit Organiser`
 
-A Python-based tool that analyzes tweets from @frankdegods using multiple Language Models (LLMs) to identify market predictions.
+> This is a fork of original work done by [`David Lin`](https://github.com/davidlinjiahao) on [`frank-analyzer`](https://github.com/davidlinjiahao/frank_analyzer)
+
+A Python-based tool wrapped in Javascript that analyses tweets from any public `@` on X/Twitter using multiple Large Language Models (LLMs) and classifies them based on several abstract and user-provided metrics. 
 
 ## Features
 
 - Multi-model analysis using:
-  - Claude 3 Opus
-  - GPT-4
-  - Gemini Pro
-  - DeepSeek
-  - Perplexity
-  - Grok
+  - `Claude 3.5 Sonnet`
+  - `GPT-4o-mini`
+  - `Gemini 1.5`
+  - ~~`DeepSeek R1`~~
+  - `Perplexity`
+  - ~~`Grok 2`~~
+  
+- HTTP endpoints for web app integration
 - Real-time consensus calculation
 - Progress tracking with status table
 - Automatic error handling and retries
@@ -18,32 +22,46 @@ A Python-based tool that analyzes tweets from @frankdegods using multiple Langua
 
 ## Setup
 
-1. Clone the repository:
+### 1. Clone the repository:
 ```bash
-git clone https://github.com/davidlinjiahao/frank_analyzer.git
-cd frank_analyzer
+git clone https://github.com/docal-pro/docal-ai.git
+cd docal-ai
 ```
 
-2. Install dependencies:
+### 2. Install dependencies:
+
+### 2.1 `MacOS`:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Set up environment variables in `.env`:
+### 2.2 `Linux` (`Ubuntu`):
+
+On `Ubuntu-22.04` and above, you'll need assistance of `python3` virtual environment.
+
+```bash
+sudo apt install python3.12-venv
+source venv/bin/activate
+python3 -m venv venv
+pip install -r requirements.txt
 ```
-OPENAI_API_KEY=your_key_here
-ANTHROPIC_API_KEY=your_key_here
-GOOGLE_API_KEY=your_key_here
-PERPLEXITY_API_KEY=your_key_here
-GROK_API_KEY=your_key_here
-DEEPSEEK_API_KEY=your_key_here
+
+
+### 3. Set up environment variables in `.env`:
+```
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GOOGLE_API_KEY=
+PERPLEXITY_API_KEY=
+GROK_API_KEY=
+DEEPSEEK_API_KEY=
 ```
 
 ## Usage
 
 Run the script with:
 ```bash
-python frank_classifier.py
+python classifier.py
 ```
 
 The script will:

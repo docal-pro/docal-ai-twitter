@@ -5,9 +5,9 @@ import shutil
 import os
 
 def fix_tweet_ids():
-    # Load tweet data from frank_tweets.json
-    print("Loading frank_tweets.json...")
-    with open('frank_tweets.json', 'r') as f:
+    # Load tweet data from tweets/tweets_frank.json
+    print("Loading tweets/tweets_frank.json...")
+    with open('tweets/tweets_frank.json', 'r') as f:
         # Parse with strict string handling for large integers
         tweets = json.loads(f.read(), parse_int=str)
     
@@ -21,20 +21,20 @@ def fix_tweet_ids():
     for ts, tid in first_few:
         print(f"Timestamp: {ts} -> ID: {tid}")
     
-    # Create backup of original results.csv
+    # Create backup of original results/results_frank.csv
     backup_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_file = f'backups/results.csv.{backup_time}.bak'
+    backup_file = f'backups/results_frank.csv.{backup_time}.bak'
     os.makedirs('backups', exist_ok=True)
-    shutil.copy2('results.csv', backup_file)
+    shutil.copy2('results_frank.csv', backup_file)
     print(f"\nCreated backup at {backup_file}")
     
-    # Read existing results.csv and create new version with string IDs
-    print("Processing results.csv...")
+    # Read existing results/results_frank.csv and create new version with string IDs
+    print("Processing results/results_frank.csv...")
     rows_processed = 0
     ids_fixed = 0
     
-    with open('results.csv', 'r') as f_in, \
-         open('results_with_fixed_ids.csv', 'w', newline='') as f_out:
+    with open('results/results_frank.csv', 'r') as f_in, \
+         open('results/results_with_fixed_ids_frank.csv', 'w', newline='') as f_out:
         reader = csv.reader(f_in)
         writer = csv.writer(f_out)
         
@@ -52,7 +52,7 @@ def fix_tweet_ids():
             if tweet_id:
                 ids_fixed += 1
             
-            # Write row with correct ID from frank_tweets.json
+            # Write row with correct ID from tweets/tweets_frank.json
             writer.writerow([tweet_id] + row[1:])
             
             # Print first few rows for verification
@@ -70,8 +70,8 @@ def fix_tweet_ids():
     print(f"Total IDs fixed: {ids_fixed}")
     
     # Replace original file with new version
-    os.replace('results_with_fixed_ids.csv', 'results.csv')
-    print("Updated results.csv with fixed tweet IDs")
+    os.replace('results/results_with_fixed_ids_frank.csv', 'results/results_frank.csv')
+    print("Updated results/results_frank.csv with fixed tweet IDs")
 
 if __name__ == "__main__":
     fix_tweet_ids() 
