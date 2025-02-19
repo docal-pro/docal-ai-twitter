@@ -705,6 +705,6 @@ async def classify_tweets_async(input_file: str, output_file: str):
     print("\nProcessing complete!")
 
 if __name__ == "__main__":
-    input_file = "./results/results_frank.csv"
-    output_file = "./results/classified_results_frank.csv"
+    input_file = "./results/frank/context.csv"
+    output_file = "./results/frank/classifier.csv"
     asyncio.run(classify_tweets_async(input_file, output_file))

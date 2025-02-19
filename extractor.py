@@ -870,7 +870,7 @@ class TargetExtractor:
 
 async def check_files():
     print("\nChecking files and configuration...")
-    input_file = "./results/classified_results_frank.csv"
+    input_file = "./results/frank/classified.csv"
     if not os.path.exists(input_file):
         print(f"Input file not found: {input_file}")
         return False
@@ -907,7 +907,7 @@ async def check_files():
         predictions_df = predictions_df.sort_values('createdAt')
         
         # Save filtered predictions
-        cleaned_file = "./results/cleaned_results_frank.csv"
+        cleaned_file = "./results/frank/cleaned.csv"
         print(f"Saving filtered predictions to: {cleaned_file}")
         predictions_df.to_csv(cleaned_file, index=False)
         
@@ -940,8 +940,8 @@ async def main():
     try:
         print("\nInitialising extractor...")
         extractor = TargetExtractor()
-        input_file = "./results/classified_results_frank.csv"
-        output_file = "./results/extracted_results_frank.csv"
+        input_file = "./results/frank/classifier.csv"
+        output_file = "./results/frank/extractor.csv"
         print(f"\nProcessing file: {input_file}")
         print(f"Output will be saved to: {output_file}")
         await extractor.process_file(input_file, output_file)

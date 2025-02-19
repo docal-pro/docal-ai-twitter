@@ -14,7 +14,7 @@ from datetime import datetime
 # Load environment variables from .env file
 load_dotenv()
 
-def create_backup(file_path: str, backup_dir: str = "backups") -> str:
+def create_backup(file_path: str, backup_dir: str = "results/backups") -> str:
     """Create a backup of a file with timestamp"""
     if not os.path.exists(file_path):
         return None
@@ -407,16 +407,21 @@ class TweetContextBuilder:
                 traceback.print_exc()
 
 async def main():
-    input_file = './tweets/tweets_frank.json'
-    output_file = './results/results_frank.csv'
-    checkpoint_file = './results/results_checkpoint_frank.csv'
-    processed_ids_file = './results/processed_ids_frank.json'
+    input_file = './tweets/frank/input.json'
+    output_file = './results/frank/context.csv'
+    checkpoint_file = './results/frank/temp/checkpoint.csv'
+    processed_ids_file = './results/frank/temp/processed.json'
     batch_size = 100  # Process tweets in batches
     
     # Create backup directory if it doesn't exist
-    backup_dir = "backups"
+    backup_dir = "results/backups"
     if not os.path.exists(backup_dir):
         os.makedirs(backup_dir)
+        
+    # Create temp directory if it doesn't exist
+    temp_dir = "results/temp"
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
     
     # Load all tweets
     with open(input_file, 'r', encoding='utf-8') as f:

@@ -410,8 +410,8 @@ class CryptoConsensusAnalyser:
         sys.stdout.flush()
 
 def main():
-    input_file = os.path.expanduser("./results/extracted_results_frank.csv")
-    output_file = os.path.expanduser("./results/evaluated_results_frank.csv")
+    input_file = os.path.expanduser("./results/frank/extractor.csv")
+    output_file = os.path.expanduser("./results/frank/evaluator.csv")
     
     print("\nInitialising analyser...")
     analyser = CryptoConsensusAnalyser()
