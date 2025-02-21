@@ -1,0 +1,11 @@
+requests
+pandas
+python-dateutil
+python-dotenv
+openai
+anthropic
+google-generativeai
+aiohttp
+asyncio
+pycoingecko
+Pillow

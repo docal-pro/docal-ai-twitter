@@ -132,9 +132,8 @@ model_progress = defaultdict(lambda: {
 def initialise_model_progress(prediction_count: int, start_idx: int = 0):
     """Initialise progress tracking for all models"""
     global model_progress
-    ## Removed: 
-    # Grok - xAI credits broken
-    base_models = ['gpt4', 'claude', 'gemini', 'perplexity']
+
+    base_models = ['gpt4', 'claude', 'gemini', 'perplexity', 'grok', 'deepseek']
     model_progress.clear()  # Clear existing progress
     
     for model in base_models:
@@ -759,9 +758,8 @@ class TargetExtractor:
             
             # Initialise progress for Gemini and Grok only
             model_progress.clear()
-            ## Removed: 
-            # Grok - xAI credits broken
-            base_models = ['gemini']
+
+            base_models = ['gemini', 'grok']
             for model in base_models:
                 model_progress[model] = {
                     "processed": 0,
@@ -913,9 +911,8 @@ async def check_files():
         
         # Initialise progress tracking with fresh counters - only for Gemini and Grok
         model_progress.clear()  # Clear existing progress
-        ## Removed: 
-        # Grok - xAI credits broken
-        for model in ['gemini']:
+
+        for model in ['gemini', 'grok']:
             model_progress[model] = {
                 "processed": 0,
                 "total": prediction_count,

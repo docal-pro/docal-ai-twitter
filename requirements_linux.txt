@@ -6,4 +6,6 @@ openai>=1.12.0
 anthropic>=0.18.1
 google-generativeai>=0.3.2
 aiohttp>=3.9.0
-asyncio>=3.4.3 
+asyncio>=3.4.3
+pycoingecko
+Pillow

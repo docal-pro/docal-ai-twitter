@@ -127,7 +127,7 @@ def retry_with_backoff(func, *args, max_retries=3, initial_delay=1):
             continue
 
 def get_deepseek_prediction(context: str) -> tuple[str, str]:
-    """Get prediction using DeepSeek R1"""
+    """Get prediction using DeepSeek R1 by OpenRouter"""
     def _make_request():
         if not os.getenv("DEEPSEEK_API_KEY"):
             raise Exception("401 Unauthorised - DeepSeek API key not found")
@@ -144,7 +144,7 @@ def get_deepseek_prediction(context: str) -> tuple[str, str]:
             ],
             "stream": False
         }
-        response = requests.post("https://api.deepseek.com/chat/completions", json=payload, headers=headers)
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", json=payload, headers=headers)
         response.raise_for_status()
         result = response.json()
         
@@ -341,7 +341,7 @@ def get_perplexity_prediction(context: str) -> tuple[str, str]:
         return "Error", str(e)
 
 def get_grok_prediction(context: str) -> tuple[str, str]:
-    """Get prediction using Grok"""
+    """Get prediction using Grok 2 by OpenRouter"""
     def _make_request():
         headers = {
             "Authorization": f"Bearer {GROK_API_KEY}",
@@ -356,7 +356,7 @@ def get_grok_prediction(context: str) -> tuple[str, str]:
             "stream": False,
             "temperature": 0
         }
-        response = requests.post("https://api.x.ai/v1/chat/completions", json=payload, headers=headers)
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", json=payload, headers=headers)
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
         classification = "Prediction" if "CLASSIFICATION: Prediction" in content else "Not Prediction"
@@ -491,10 +491,8 @@ async def process_model(model_name: str, model_func, tweets_to_process: List[Tup
 
 def calculate_consensus_prediction(df: pd.DataFrame) -> pd.Series:
     """Calculate consensus prediction based on majority vote from all models"""
-    ## Removed: 
-    # DeepSeek - Credits temporarily disabled by DeepSeek
-    # Grok - xAI credits broken
-    models = ['gpt4', 'claude', 'gemini', 'perplexity']
+
+    models = ['gpt4', 'claude', 'gemini', 'perplexity', 'grok', 'deepseek']
     
     def get_consensus(row):
         # Get all predictions for this row

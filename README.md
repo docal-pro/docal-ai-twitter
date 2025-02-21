@@ -31,18 +31,21 @@ cd docal-ai
 ### 2. Install dependencies:
 
 ### 2.1 `MacOS`:
+
 ```bash
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ### 2.2 `Linux` (`Ubuntu`):
 
-On `Ubuntu-22.04` and above, you'll need assistance of `python3` virtual environment.
+On `Ubuntu-22.04` and above, you'll need to install `python3` virtual environment provider.
 
 ```bash
 sudo apt install python3.12-venv
-source venv/bin/activate
 python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 

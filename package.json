@@ -5,6 +5,10 @@
   },
   "scripts": {
     "init": "[ \"$(uname)\" = \"Linux\" ] && sh venv/bin/activate && python3 -m venv venv",
-    "install": "pip install -r requirements.txt"
+    "prep-apple": "pip install -r requirements_apple.txt",
+    "prep-linux": "pip install -r requirements_linux.txt"
+  },
+  "devDependencies": {
+    "wrangler": "^3.109.2"
   }
 }

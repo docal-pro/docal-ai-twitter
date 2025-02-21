@@ -15,7 +15,7 @@ def analyse_tweet_contexts():
     with open(os.path.join(parent_dir, 'results/results_frank.csv'), 'r') as f:
         reader = csv.reader(f)
         header = next(reader)
-        results = list(reader)prompt
+        results = list(reader)
     
     # Create mapping of tweet IDs to their results
     results_map = {row[0]: row for row in results}
