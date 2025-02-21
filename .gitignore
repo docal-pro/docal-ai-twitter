@@ -1,7 +1,9 @@
 # Environment variables
 .env
+twitter-scraper-finetune
 
 # Wrangler
+server
 .wrangler
 wrangler.json
 

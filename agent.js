@@ -1,12 +1,12 @@
-require('dotenv').config();
-const { Scraper } = require('agent-twitter-client');
+require("dotenv").config();
+const { Scraper } = require("agent-twitter-client");
 
 const getCircularReplacer = () => {
   const seen = new WeakSet();
   return (key, value) => {
     if (typeof value === "object" && value !== null) {
       if (seen.has(value)) {
-        return '[Circular]';
+        return "[Circular]";
       }
       seen.add(value);
     }
@@ -17,7 +17,7 @@ const getCircularReplacer = () => {
 async function main() {
   const tweetId = process.argv[2];
   if (!tweetId) {
-    console.error('Please provide a tweet ID as an argument');
+    console.error("Please provide a tweet ID as an argument");
     process.exit(1);
   }
 
@@ -27,7 +27,7 @@ async function main() {
       process.env.TWITTER_USERNAME,
       process.env.TWITTER_PASSWORD
     );
-    
+
     const tweet = await scraper.getTweet(tweetId);
     // Print the tweet data as JSON string, handling circular references
     console.log(JSON.stringify(tweet, getCircularReplacer()));
@@ -37,7 +37,7 @@ async function main() {
   }
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error(error);
   process.exit(1);
-}); 
+});

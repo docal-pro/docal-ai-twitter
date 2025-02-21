@@ -9,16 +9,10 @@ A Python-based tool wrapped in Javascript that analyses tweets from any public `
 - Multi-model analysis using:
   - `Claude 3.5 Sonnet`
   - `GPT-4o-mini`
-  - `Gemini 1.5`
-  - ~~`DeepSeek R1`~~
-  - `Perplexity`
-  - ~~`Grok 2`~~
-  
-- HTTP endpoints for web app integration
-- Real-time consensus calculation
-- Progress tracking with status table
-- Automatic error handling and retries
-- Asynchronous processing
+  - `Gemini 1.5 Pro`
+  - `DeepSeek R1`
+  - `Perplexity R1`
+  - `Grok 2/3`
 
 ## Setup
 
@@ -30,27 +24,31 @@ cd docal-ai
 
 ### 2. Install dependencies:
 
-### 2.1 `MacOS`:
+### 2.1 MacOS:
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+npm i
 ```
 
-### 2.2 `Linux` (`Ubuntu`):
+### 2.2 Linux (Ubuntu):
 
 On `Ubuntu-22.04` and above, you'll need to install `python3` virtual environment provider.
 
 ```bash
 sudo apt install python3.12-venv
+
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+npm i
 ```
 
 
 ### 3. Set up environment variables in `.env`:
+
 ```
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
@@ -58,24 +56,35 @@ GOOGLE_API_KEY=
 PERPLEXITY_API_KEY=
 GROK_API_KEY=
 DEEPSEEK_API_KEY=
+COINGECKO_API_KEY=
+TWITTER_USERNAME=
+TWITTER_PASSWORD=
 ```
 
 ## Usage
 
-Run the script with:
+### 1. Initialise virtual environment
+
 ```bash
-python classifier.py
+# Shortcut to initialise virtual environment
+npm run init
 ```
 
-The script will:
-1. Process tweets using multiple LLMs
-2. Calculate consensus predictions
-3. Display real-time progress
-4. Save results to CSV file
+### 2. Install dependencies
 
-## Output
+#### 2.1 MacOS
 
-The script generates a CSV file with:
-- Original tweet context
-- Individual model predictions and reasoning
-- Consensus prediction based on majority voting 
+```bash
+# Shortcut to install dependencies
+npm run i-apple # Apple M1/2/3/4
+```
+
+#### 2.2 Linux (Ubuntu)
+
+```bash
+# Shortcut to install dependencies
+npm run i-linux # Linux Ubuntu 22.04+
+```
+
+### 3. Build
+
