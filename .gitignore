@@ -1,6 +1,6 @@
 # Environment variables
 .env
-twitter-scraper-finetune
+twitter-scraper
 
 # Wrangler
 server
