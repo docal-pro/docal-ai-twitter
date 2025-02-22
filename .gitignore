@@ -3,7 +3,6 @@
 twitter-scraper
 
 # Wrangler
-server
 .wrangler
 wrangler.json
 
