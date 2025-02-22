@@ -15,6 +15,9 @@ from collections import defaultdict
 import fcntl
 import csv
 
+# Load arguments
+user = sys.argv[1]
+
 # Load environment variables
 load_dotenv()
 
@@ -25,9 +28,9 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 GROK_API_KEY = os.getenv("GROK_API_KEY")
 
-SYSTEM_PROMPT = """You are analysing tweets from @frankdegods. Your task is to determine if the tweet contains a prediction about the crypto market.
+SYSTEM_PROMPT = """You are analysing tweets from @{user}. Your task is to determine if the tweet contains a prediction about the crypto market.
 
-Classify as 'Prediction' ONLY if @frankdegods is explicitly expressing a directional view (bullish/bearish) about:
+Classify as 'Prediction' ONLY if @{user} is explicitly expressing a directional view (bullish/bearish) about:
 1. Specific tokens (tradable crypto tokens like $BTC, $ETH, $HYPE)
 2. Projects (twitter accounts working in web3 without tokens yet)
 3. Metas (crypto narratives like AI, NFT, DeFi, Layer 1, Layer 2, Meme Coins, RWA, SocialFi, GameFi, etc.)
@@ -846,6 +849,6 @@ async def classify_tweets_async(input_file: str, output_file: str):
 
 
 if __name__ == "__main__":
-    input_file = "./results/frank/context.csv"
-    output_file = "./results/frank/classifier.csv"
+    input_file = "./results/{user}/context.csv"
+    output_file = "./results/{user}/classifier.csv"
     asyncio.run(classify_tweets_async(input_file, output_file))

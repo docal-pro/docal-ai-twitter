@@ -10,6 +10,9 @@ import sys
 from pycoingecko import CoinGeckoAPI
 import random
 
+# Load arguments
+user = sys.argv[1]
+
 # Load environment variables
 load_dotenv()
 
@@ -457,8 +460,8 @@ class CryptoConsensusAnalyser:
 
 
 def main():
-    input_file = os.path.expanduser("./results/frank/extractor.csv")
-    output_file = os.path.expanduser("./results/frank/evaluator.csv")
+    input_file = os.path.expanduser("./results/{user}/extractor.csv")
+    output_file = os.path.expanduser("./results/{user}/evaluator.csv")
 
     print("\nInitialising analyser...")
     analyser = CryptoConsensusAnalyser()

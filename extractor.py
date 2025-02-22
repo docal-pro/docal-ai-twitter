@@ -22,6 +22,9 @@ import google.generativeai as genai
 import sys
 from collections import defaultdict
 
+# Load arguments
+user = sys.argv[1]
+
 # Load environment variables
 load_dotenv()
 
@@ -96,13 +99,13 @@ PROJECT_MAPPINGS = {
     # Add more project mappings as needed
 }
 
-SYSTEM_PROMPT = """You are analysing tweets from @frankdegods to extract the target of his predictions and their sentiment. The target can be:
+SYSTEM_PROMPT = """You are analysing tweets from user @ to extract the target of his predictions and their sentiment. The target can be:
 
 1. Specific tokens (tradable crypto tokens like $BTC, $ETH, $HYPE)
 2. Projects (twitter accounts working in web3 without tokens yet)
 3. Metas (crypto narratives aligned with CoinGecko categories: AI, NFTs, DeFi, L1, L2, Memes, RWA, Social Fi, GameFi, BTC, ICO)
 
-For each prediction, identify ALL targets mentioned and whether Frank is bullish or bearish on them.
+For each prediction, identify ALL targets mentioned and whether user is bullish or bearish on them.
 - For tokens, use standardised symbols (e.g., $BTC instead of $BITCOIN)
 - For projects without tokens, return "None"
 - For metas, use only the standardised categories listed above
@@ -979,7 +982,7 @@ class TargetExtractor:
 
 async def check_files():
     print("\nChecking files and configuration...")
-    input_file = "./results/frank/classified.csv"
+    input_file = "./results/{user}/classified.csv"
     if not os.path.exists(input_file):
         print(f"Input file not found: {input_file}")
         return False
@@ -1018,7 +1021,7 @@ async def check_files():
         predictions_df = predictions_df.sort_values("createdAt")
 
         # Save filtered predictions
-        cleaned_file = "./results/frank/cleaned.csv"
+        cleaned_file = "./results/{user}/cleaned.csv"
         print(f"Saving filtered predictions to: {cleaned_file}")
         predictions_df.to_csv(cleaned_file, index=False)
 
@@ -1051,8 +1054,8 @@ async def main():
     try:
         print("\nInitialising extractor...")
         extractor = TargetExtractor()
-        input_file = "./results/frank/classifier.csv"
-        output_file = "./results/frank/extractor.csv"
+        input_file = "./results/{user}/classifier.csv"
+        output_file = "./results/{user}/extractor.csv"
         print(f"\nProcessing file: {input_file}")
         print(f"Output will be saved to: {output_file}")
         await extractor.process_file(input_file, output_file)

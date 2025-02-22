@@ -1,6 +1,7 @@
 import json
 import csv
 import os
+import sys
 import time
 import shutil
 from typing import List, Dict, Optional
@@ -10,6 +11,9 @@ import asyncio
 from pyppeteer import launch
 import subprocess
 from datetime import datetime
+
+# Load arguments
+user = sys.argv[1]
 
 # Load environment variables from .env file
 load_dotenv()
@@ -500,10 +504,10 @@ class TweetContextBuilder:
 
 
 async def main():
-    input_file = "./tweets/frank/input.json"
-    output_file = "./results/frank/context.csv"
-    checkpoint_file = "./results/frank/temp/checkpoint.csv"
-    processed_ids_file = "./results/frank/temp/processed.json"
+    input_file = "./tweets/{user}/input.json"
+    output_file = "./results/{user}/context.csv"
+    checkpoint_file = "./results/{user}/temp/checkpoint.csv"
+    processed_ids_file = "./results/{user}/temp/processed.json"
     batch_size = 100  # Process tweets in batches
 
     # Create backup directory if it doesn't exist

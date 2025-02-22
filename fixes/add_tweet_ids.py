@@ -5,10 +5,10 @@ import shutil
 import os
 
 
-def add_tweet_ids():
-    # Load tweet data from tweets/tweets_frank.json
-    print("Loading tweets/tweets_frank.json...")
-    with open("tweets/tweets_frank.json", "r") as f:
+def add_tweet_ids(user, function):
+    # Load tweet data from tweets/{user}/input.json
+    print("Loading tweets/{user}/input.json...")
+    with open("../tweets/{user}/input.json", "r") as f:
         # Parse with strict string handling for large integers
         tweets = json.loads(f.read(), parse_int=str)
 
@@ -25,20 +25,20 @@ def add_tweet_ids():
         print(f"Text: {tweet['text'][:50]}...")
         print()
 
-    # Create backup of original results/results_frank.csv
+    # Create backup of original results/{user}/{function}.csv
     backup_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_file = f"backups/results_frank.csv.{backup_time}.bak"
-    os.makedirs("backups", exist_ok=True)
-    shutil.copy2("results/results_frank.csv", backup_file)
+    backup_file = f"../backups/{user}/{function}.csv.{backup_time}.bak"
+    os.makedirs("../backups", exist_ok=True)
+    shutil.copy2("../results/{user}/{function}.csv", backup_file)
     print(f"\nCreated backup at {backup_file}")
 
-    # Read existing results/results_frank.csv and create new version with corrected columns
-    print("Processing results/results_frank.csv...")
+    # Read existing results/{user}/{function}.csv and create new version with corrected columns
+    print("Processing results/{user}/{function}.csv...")
     rows_processed = 0
     matches_found = 0
 
-    with open("results/results_frank.csv", "r") as f_in, open(
-        "results/results_with_idsresults/_frank.csv", "w", newline=""
+    with open("../results/{user}/{function}.csv", "r") as f_in, open(
+        "../results/{user}/{function}_with_ids.csv", "w", newline=""
     ) as f_out:
         reader = csv.reader(f_in)
         writer = csv.writer(f_out)
@@ -77,8 +77,10 @@ def add_tweet_ids():
     print(f"Total matches found: {matches_found}")
 
     # Replace original file with new version
-    os.replace("results/results_with_ids_frank.csv", "results/results_frank.csv")
-    print("Updated results/results_frank.csv with corrected columns")
+    os.replace(
+        "../results/{user}/{function}_with_ids.csv", "../results/{user}/{function}.csv"
+    )
+    print("Updated {user}/{function}.csv with corrected columns")
 
 
 if __name__ == "__main__":

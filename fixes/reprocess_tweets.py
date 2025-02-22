@@ -4,16 +4,16 @@ from typing import Dict, List
 import os
 
 
-def analyse_tweet_contexts():
+def analyse_tweet_contexts(user, function):
     """Analyse tweets to count replies and check for contexts that match tweet text."""
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    # Load tweet data from tweets/tweets_frank.json
-    with open(os.path.join(parent_dir, "tweets/tweets_frank.json"), "r") as f:
+    # Load tweet data from tweets/{user}/input.json
+    with open(os.path.join(parent_dir, "../tweets/{user}/input.json"), "r") as f:
         all_tweets = json.load(f)
 
     # Load results data
-    with open(os.path.join(parent_dir, "results/results_frank.csv"), "r") as f:
+    with open(os.path.join(parent_dir, "../results/{user}/{function}.csv"), "r") as f:
         reader = csv.reader(f)
         header = next(reader)
         results = list(reader)
@@ -23,7 +23,7 @@ def analyse_tweet_contexts():
 
     reply_count = 0
     true_contexts = 0
-    frank_prefix_contexts = 0
+    user_prefix_contexts = 0
     other_contexts = 0
 
     print("\nAnalysing tweet contexts...")
@@ -57,10 +57,10 @@ def analyse_tweet_contexts():
                         print(f"\nTRUE Context Example #{tweet_id}:")
                         print(f"Text: {tweet_text}")
                         print(f"Context: {context}")
-                elif context.startswith("@frankdegods: "):
-                    frank_prefix_contexts += 1
-                    if frank_prefix_contexts <= 10:
-                        print(f"\nFrank Prefix Example #{tweet_id}:")
+                elif context.startswith("@{user}: "):
+                    user_prefix_contexts += 1
+                    if user_prefix_contexts <= 10:
+                        print(f"\nUser Prefix Example #{tweet_id}:")
                         print(f"Text: {tweet_text}")
                         print(f"Context: {context}")
                 else:
@@ -76,7 +76,7 @@ def analyse_tweet_contexts():
         f"Contexts marked as TRUE: {true_contexts} ({(true_contexts/reply_count*100):.1f}%)"
     )
     print(
-        f"Contexts with @ prefix: {frank_prefix_contexts} ({(frank_prefix_contexts/reply_count*100):.1f}%)"
+        f"Contexts with @ prefix: {user_prefix_contexts} ({(user_prefix_contexts/reply_count*100):.1f}%)"
     )
     print(f"Other contexts: {other_contexts} ({(other_contexts/reply_count*100):.1f}%)")
 

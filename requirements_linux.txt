@@ -9,3 +9,4 @@ aiohttp>=3.9.0
 asyncio>=3.4.3
 pycoingecko
 Pillow
+pyppeteer
