@@ -52,5 +52,7 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-*.csv
-*.log 
+**/*.csv
+**/*.log
+results
+tweets
