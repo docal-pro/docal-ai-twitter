@@ -27,8 +27,9 @@ anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 GROK_API_KEY = os.getenv("GROK_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-SYSTEM_PROMPT = """You are analysing tweets from @{user}. Your task is to determine if the tweet contains a prediction about the crypto market.
+SYSTEM_PROMPT = f"""You are analysing tweets from @{user}. Your task is to determine if the tweet contains a prediction about the crypto market.
 
 Classify as 'Prediction' ONLY if @{user} is explicitly expressing a directional view (bullish/bearish) about:
 1. Specific tokens (tradable crypto tokens like $BTC, $ETH, $HYPE)
@@ -102,7 +103,7 @@ def print_status_table():
         status_str = f"{status:11}"
         error_str = f"{error_str:45}"
 
-        print(f"│ {model_str} │ {progress_str} │ {status_str} │ {error_str} │")
+        print(f"│ {model_str} │ {progress_str} │ {status_str} │ {error_str}  │")
 
     print(
         "└────────────┴──────────────┴─────────────┴────────────────────────────────────────────────┘"
@@ -411,11 +412,11 @@ def get_grok_prediction(context: str) -> tuple[str, str]:
 
     def _make_request():
         headers = {
-            "Authorization": f"Bearer {GROK_API_KEY}",
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
         }
         payload = {
-            "model": "grok-2-latest",
+            "model": "x-ai/grok-2-vision-1212",
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": context},
@@ -849,6 +850,6 @@ async def classify_tweets_async(input_file: str, output_file: str):
 
 
 if __name__ == "__main__":
-    input_file = "./results/{user}/context.csv"
-    output_file = "./results/{user}/classifier.csv"
+    input_file = f"./results/{user}/context.csv"
+    output_file = f"./results/{user}/classifier.csv"
     asyncio.run(classify_tweets_async(input_file, output_file))
