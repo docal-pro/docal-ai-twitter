@@ -10,6 +10,6 @@
 		"enabled": true
 	},
 	"vars": {
-		"SERVER_URL": "https://server.docal.pro"
+		"SERVER_URL": "https://store.docal.pro"
 	}
 }

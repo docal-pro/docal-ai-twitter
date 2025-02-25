@@ -1,12 +1,21 @@
 {
   "dependencies": {
     "agent-twitter-client": "^0.0.18",
-    "dotenv": "^16.4.7"
+    "axios": "^1.7.9",
+    "child_process": "^1.0.2",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "path": "^0.12.7"
   },
+  "type": "module",
   "scripts": {
     "init": "[ \"$(uname)\" = \"Linux\" ] && sh venv/bin/activate && python3 -m venv venv",
     "i-apple": "pip install -r requirements_apple.txt",
-    "i-linux": "pip install -r requirements_linux.txt"
+    "i-linux": "pip install -r requirements_linux.txt",
+    "p-dev": "wrangler dev",
+    "p-deploy": "wrangler deploy",
+    "p-build": "wrangler build",
+    "s-start": "node server/server.js"
   },
   "devDependencies": {
     "wrangler": "^3.109.2"

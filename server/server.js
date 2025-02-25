@@ -8,8 +8,11 @@ import {
 } from "fs";
 import { exec } from "child_process";
 import { join } from "path";
-import { get } from "axios";
+import axios from "axios";
+import dotenv from "dotenv";
 
+dotenv.config();
+const { get } = axios;
 const app = express();
 app.use(json());
 
@@ -100,4 +103,4 @@ app.post("/trigger", async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+app.listen(3030, () => console.log("Server running on port 3030"));
