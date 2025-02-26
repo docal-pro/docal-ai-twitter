@@ -19,7 +19,7 @@ user = sys.argv[1]
 load_dotenv()
 
 
-def create_backup(file_path: str, backup_dir: str = "results/backups") -> str:
+def create_backup(file_path: str, backup_dir: str = f"results/backups/{user}") -> str:
     """Create a backup of a file with timestamp"""
     if not os.path.exists(file_path):
         return None
@@ -35,7 +35,7 @@ def create_backup(file_path: str, backup_dir: str = "results/backups") -> str:
 
     # Create the backup
     shutil.copy2(file_path, backup_path)
-    print(f"Created backup: {backup_path}")
+    print(f"📁 Created backup: {backup_path}")
     return backup_path
 
 
@@ -61,6 +61,8 @@ class TweetContextBuilder:
             "api_errors": 0,
             "rate_limits_hit": 0,
             "restricted_tweets": 0,
+            "status": " Running ⏯",
+            "error_status": " Active ✓",
         }
 
         # Load current progress from output file
@@ -95,6 +97,8 @@ class TweetContextBuilder:
     def print_stats(self):
         """Print current processing stats"""
         total = len(self.tweets)
+        status = self.stats["status"]
+        error_status = self.stats["error_status"]
         processed = self.stats["processed_tweets"]
         error_count = (
             self.stats["failed_contexts"]
@@ -108,33 +112,33 @@ class TweetContextBuilder:
 
         print("\033[H\033[J")  # Clear screen
         print("=== Tweet Processing Status ===")
-        print("┌─────────────┬───────────────┬──────────┬─────────────────┐")
-        print("│ Metric      │ Count         │ Status   │ % of Total      │")
-        print("├─────────────┼───────────────┼──────────┼─────────────────┤")
+        print("┌─────────────┬───────────────┬────────────┬────────────┐")
+        print("│ Metric      │ Count         │ Status     │ % of Total │")
+        print("├─────────────┼───────────────┼────────────┼────────────┤")
         print(
-            f"│ Progress    │ {processed:>6,}/{total:<6,} │ Running  │ {progress:>6.1f}%         │"
+            f"│ Progress    │ {processed}/{total:<11,} │{status}  │ {progress:>6.1f}%    │"
         )
-        print("├─────────────┼───────────────┼──────────┼─────────────────┤")
+        print("├─────────────┼───────────────┼────────────┼────────────┤")
         print(
-            f"│ Errors      │ {error_count:>13,} │ Active   │ {error_percentage:>6.1f}%         │"
+            f"│ Errors      │ {error_count:<13,} │ {error_status}  │ {error_percentage:>6.1f}%    │"
         )
-        print("└─────────────┴───────────────┴──────────┴─────────────────┘")
+        print("└─────────────┴───────────────┴────────────┴────────────┘")
         print()
 
     def init_stats(self):
         """Initialise stats from historical data"""
         if os.path.exists(self.output_file):
             try:
-                print("\nAnalysing existing output file...")
+                print("\n🔎 Analysing existing output file...")
                 with open(self.output_file, "r", encoding="utf-8") as f:
                     reader = csv.reader(f)
                     next(reader)  # Skip header
                     processed = sum(1 for _ in reader)
                     self.stats["processed_tweets"] = processed
-                print(f"Found {processed:,} processed tweets")
+                print(f"✅ Found {processed:,} processed tweets")
                 self.print_stats()
             except Exception as e:
-                print(f"Error loading historical stats: {e}")
+                print(f"❌ Error loading historical stats: {e}")
                 import traceback
 
                 traceback.print_exc()
@@ -177,7 +181,7 @@ class TweetContextBuilder:
         """Try to get tweet using agent-twitter-client"""
         print(f"\033[2J\033[H")  # Clear screen and move cursor to top
         self.print_stats()  # Show updated stats
-        print(f"\nGetting tweet {tweet_id}...")
+        print(f"\n🔎 Getting tweet {tweet_id}...")
 
         try:
             process = await asyncio.create_subprocess_exec(
@@ -286,7 +290,7 @@ class TweetContextBuilder:
         tweet_data = await self.get_tweet_with_agent(tweet_id)
         if tweet_data:
             return tweet_data
-        print(f"Failed to get tweet {tweet_id}")
+        print(f"❌ Failed to get tweet {tweet_id}")
         return None
 
     async def build_context_thread(self, tweet: Dict) -> str:
@@ -313,7 +317,7 @@ class TweetContextBuilder:
 
                     # Try to get the tweet using our dual approach
                     print(
-                        f"Getting tweet {tweet_id} (attempt {retry_count + 1}/{max_retries_per_tweet})..."
+                        f"🔎 Getting tweet {tweet_id} (attempt {retry_count + 1}/{max_retries_per_tweet})..."
                     )
                     parent_tweet = await asyncio.wait_for(
                         self.get_tweet_by_id(tweet_id),
@@ -350,12 +354,12 @@ class TweetContextBuilder:
                         thread_tweets.append(parent_tweet)
                         return parent_tweet
                 except asyncio.TimeoutError:
-                    print(f"Timeout on attempt {retry_count + 1} for tweet {tweet_id}")
+                    print(f"❌ Timeout on attempt {retry_count + 1} for tweet {tweet_id}")
                     self.stats["timeout_errors"] += 1
                     self.print_stats()
                 except Exception as e:
                     print(
-                        f"Error on attempt {retry_count + 1} for tweet {tweet_id}: {str(e)}"
+                        f"❌ Error on attempt {retry_count + 1} for tweet {tweet_id}: {str(e)}"
                     )
                     self.stats["other_errors"] += 1
                     self.print_stats()
@@ -365,7 +369,7 @@ class TweetContextBuilder:
                     await asyncio.sleep(5)  # Wait 5 seconds between retries
 
             print(
-                f"Failed to get tweet {tweet_id} after {max_retries_per_tweet} attempts"
+                f"❌ Failed to get tweet {tweet_id} after {max_retries_per_tweet} attempts"
             )
             self.stats["failed_contexts"] += 1
             self.print_stats()
@@ -414,7 +418,7 @@ class TweetContextBuilder:
                 else:
                     delay = self.config["min_delay"]
 
-                print(f"Retrying after {delay}ms...")
+                print(f"🔄 Retrying after {delay}ms...")
                 await asyncio.sleep(delay / 1000)  # Convert to seconds
 
             if (
@@ -447,7 +451,7 @@ class TweetContextBuilder:
 
         # Limit the number of tweets to process
         tweets = tweets[: self.limit]
-        print(f"Processing {len(tweets)} tweets...")
+        print(f"🔎 Processing {len(tweets)} tweets...")
 
         # Always append to preserve history
         file_exists = os.path.exists(self.output_file)
@@ -483,7 +487,7 @@ class TweetContextBuilder:
                     self.print_stats()
 
                 except Exception as e:
-                    print(f"Error processing tweet: {str(e)}")
+                    print(f"❌ Error processing tweet: {str(e)}")
                     self.stats["other_errors"] += 1
                     continue
 
@@ -497,26 +501,26 @@ class TweetContextBuilder:
                     self.stats["processed_tweets"] = sum(1 for _ in reader)
                 self.print_stats()
             except Exception as e:
-                print(f"Error loading historical stats: {e}")
+                print(f"❌ Error loading historical stats: {e}")
                 import traceback
 
                 traceback.print_exc()
 
 
 async def main():
-    input_file = "./tweets/{user}/input.json"
-    output_file = "./results/{user}/context.csv"
-    checkpoint_file = "./results/{user}/temp/checkpoint.csv"
-    processed_ids_file = "./results/{user}/temp/processed.json"
+    input_file = f"./tweets/{user}/input.json"
+    output_file = f"./results/{user}/context.csv"
+    checkpoint_file = f"./results/{user}/temp/checkpoint.csv"
+    processed_ids_file = f"./results/{user}/temp/processed.json"
     batch_size = 100  # Process tweets in batches
 
     # Create backup directory if it doesn't exist
-    backup_dir = "results/backups"
+    backup_dir = f"./results/backups/{user}"
     if not os.path.exists(backup_dir):
         os.makedirs(backup_dir)
 
     # Create temp directory if it doesn't exist
-    temp_dir = "results/temp"
+    temp_dir = f"./results/temp/{user}"
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
 
@@ -545,13 +549,13 @@ async def main():
 
     # Filter out already processed tweets
     tweets_to_process = [t for t in all_tweets if t["id"] not in processed_ids]
-    print(f"\nResuming with {len(tweets_to_process)} tweets left to process")
+    print(f"\n🔎 Resuming with {len(tweets_to_process)} tweets left to process")
 
     # Process tweets in batches
     for i in range(0, len(tweets_to_process), batch_size):
         batch = tweets_to_process[i : i + batch_size]
         print(
-            f"\nProcessing batch {i//batch_size + 1}/{len(tweets_to_process)//batch_size + 1}"
+            f"\n🔎 Processing batch {i//batch_size + 1}/{len(tweets_to_process)//batch_size + 1}"
         )
 
         for tweet in batch:
@@ -605,18 +609,23 @@ async def main():
                 await asyncio.sleep(0.5)
 
             except asyncio.TimeoutError:
-                print(f"Timeout processing tweet {tweet['id']}, skipping...")
+                print(f"❌ Timeout processing tweet {tweet['id']}, skipping...")
                 processor.stats["timeout_errors"] += 1
                 continue
             except Exception as e:
-                print(f"Error processing tweet {tweet['id']}: {str(e)}")
+                print(f"❌ Error processing tweet {tweet['id']}: {str(e)}")
                 processor.stats["other_errors"] += 1
                 continue
 
         # Add delay between batches
         await asyncio.sleep(2)
 
-    print("\nProcessing complete! Stats:")
+    processor.stats["status"] = " Done ✓   "
+    processor.stats["error_status"] = "None ✓   "
+    processor.print_stats()
+    processor.stats["status"] = "Complete"
+    processor.stats["error_status"] = "None"
+    print("\n✅ Processing complete! Stats:")
     for key, value in processor.stats.items():
         print(f"{key}: {value}")
 

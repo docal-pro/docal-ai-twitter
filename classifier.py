@@ -52,7 +52,7 @@ REASONING: [1-2 sentences explaining why]"""
 
 # Global progress tracking
 model_progress = defaultdict(
-    lambda: {"processed": 0, "total": 0, "status": "Waiting", "last_error": None}
+    lambda: {"processed": 0, "total": 0, "status": "waiting", "text": " Waiting 𝌗", "last_error": None}
 )
 
 # Global file lock for saving progress
@@ -69,13 +69,13 @@ def print_status_table():
     clear_terminal()
     print("\n=== Model Processing Status ===")
     print(
-        "┌────────────┬──────────────┬─────────────┬────────────────────────────────────────────────┐"
+        "┌────────────┬──────────────┬───────────┬────────────────────────────────────────────────┐"
     )
     print(
-        "│ Model      │ Progress     │ Status      │ Last Error                                     │"
+        "│ Model      │ Progress     │ Status    │ Last Error                                     │"
     )
     print(
-        "├────────────┼──────────────┼─────────────┼────────────────────────────────────────────────┤"
+        "├────────────┼──────────────┼───────────┼────────────────────────────────────────────────┤"
     )
 
     for model in sorted(model_progress.keys()):
@@ -83,10 +83,11 @@ def print_status_table():
         progress_str = f"{progress['processed']}/{progress['total']}"
         status = progress["status"]
         error = progress["last_error"]
+        text = progress["text"]
 
         # Format error message to be more readable
         if error:
-            # Try to extract more meaningful part of the error
+            # Try to extract more meaningful part of the error from text field
             if isinstance(error, str):
                 if "400 - " in error:
                     error = error.split("400 - ", 1)[1]
@@ -94,19 +95,21 @@ def print_status_table():
                     error = error.split(":", 1)[1].strip()
                 # Remove quotes and curly braces
                 error = error.replace("{", "").replace("}", "").replace('"', "")
-                error = error[:45] + "..." if len(error) > 45 else error
+                error = error[:43] + "..." if len(error) > 43 else error
+
         error_str = error if error else ""
 
         # Pad model name to 10 chars, progress to 12 chars, status to 11 chars, error to 45 chars
         model_str = f"{model:10}"
         progress_str = f"{progress_str:12}"
         status_str = f"{status:11}"
-        error_str = f"{error_str:45}"
+        text_str = f"{text}"
+        error_str = f"{error_str:46}"
 
-        print(f"│ {model_str} │ {progress_str} │ {status_str} │ {error_str}  │")
+        print(f"│ {model_str} │ {progress_str} │ {text_str} │ {error_str} │")
 
     print(
-        "└────────────┴──────────────┴─────────────┴────────────────────────────────────────────────┘"
+        "└────────────┴──────────────┴───────────┴────────────────────────────────────────────────┘"
     )
     sys.stdout.flush()
 
@@ -143,15 +146,15 @@ def get_deepseek_prediction(context: str) -> tuple[str, str]:
     """Get prediction using DeepSeek R1 by OpenRouter"""
 
     def _make_request():
-        if not os.getenv("DEEPSEEK_API_KEY"):
+        if not os.getenv("OPENROUTER_API_KEY"):
             raise Exception("401 Unauthorised - DeepSeek API key not found")
 
         headers = {
-            "Authorization": f"Bearer {os.getenv('DEEPSEEK_API_KEY')}",
+            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
             "Content-Type": "application/json",
         }
         payload = {
-            "model": "deepseek-reasoner",
+            "model": "deepseek/deepseek-r1",
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": context},
@@ -188,7 +191,7 @@ def get_deepseek_prediction(context: str) -> tuple[str, str]:
     try:
         return retry_with_backoff(_make_request)
     except Exception as e:
-        print(f"Error with DeepSeek API after retries: {str(e)}")
+        print(f"❌ Error with DeepSeek API after retries: {str(e)}")
         return "Error", str(e)
 
 
@@ -224,7 +227,7 @@ def get_gpt4_prediction(context: str) -> tuple[str, str]:
     try:
         return retry_with_backoff(_make_request)
     except Exception as e:
-        print(f"Error with OpenAI API after retries: {str(e)}")
+        print(f"❌ Error with OpenAI API after retries: {str(e)}")
         return "Error", str(e)
 
 
@@ -264,7 +267,7 @@ def get_claude_prediction(context: str) -> tuple[str, str]:
         error_str = str(e)
         if "credit balance is too low" in error_str.lower():
             error_str = "Quota exceeded - Insufficient credit balance"
-        print(f"Error with Claude API after retries: {error_str}")
+        print(f"❌ Error with Claude API after retries: {error_str}")
         return "Error", error_str
 
 
@@ -275,7 +278,7 @@ def get_gemini_prediction(context: str) -> tuple[str, str]:
         if not os.getenv("GOOGLE_API_KEY"):
             raise Exception("401 Unauthorised - Gemini API key not found")
 
-        model = genai.GenerativeModel("gemini-pro")
+        model = genai.GenerativeModel("gemini-1.5-pro")
 
         try:
             # Configure generation settings
@@ -360,7 +363,7 @@ RULES:
         return retry_with_backoff(_make_request)
     except Exception as e:
         error_msg = str(e)
-        print(f"Error with Gemini API after retries: {error_msg}")
+        print(f"❌ Error with Gemini API after retries: {error_msg}")
         return "Error", error_msg
 
 
@@ -403,7 +406,7 @@ def get_perplexity_prediction(context: str) -> tuple[str, str]:
     try:
         return retry_with_backoff(_make_request)
     except Exception as e:
-        print(f"Error with Perplexity API after retries: {str(e)}")
+        print(f"❌ Error with Perplexity API after retries: {str(e)}")
         return "Error", str(e)
 
 
@@ -477,11 +480,12 @@ async def process_model(
     model_progress[model_name] = {
         "processed": initial_completed,
         "total": total_tweets,
-        "status": "Running",
+        "status": "running",
+        "text": "Running ⏯",
         "last_error": None,
     }
     print_status_table()
-    print(f"\nStarting {model_name} model processing...")
+    print(f"\n🔎 Starting {model_name} model processing...")
 
     error_count = 0
     auth_error = False
@@ -495,7 +499,7 @@ async def process_model(
                 if auth_error or quota_error:
                     continue
 
-                print(f"\nProcessing tweet {idx+1} with {model_name}...")
+                print(f"\n🔎 Processing tweet {idx+1} with {model_name}...")
                 pred, reason = await asyncio.get_event_loop().run_in_executor(
                     executor, model_func, context
                 )
@@ -504,18 +508,20 @@ async def process_model(
                 if pred == "Error":
                     error_str = reason.lower()
                     model_progress[model_name]["last_error"] = reason
-                    print(f"\nError from {model_name}: {reason}")
+                    print(f"\n❌ Error from {model_name}: {reason}")
 
                     # Check for auth/quota errors
                     if "401" in error_str or "unauthorized" in error_str:
                         auth_error = True
-                        model_progress[model_name]["status"] = "Auth ❌"
+                        model_progress[model_name]["status"] = "unauthorised"
+                        model_progress[model_name]["text"] = " Access ✕"
                         print_status_table()
                         await save_progress(df, output_file)
                         return
                     elif "quota" in error_str or "credit" in error_str:
                         quota_error = True
-                        model_progress[model_name]["status"] = "Quota ❌"
+                        model_progress[model_name]["status"] = "quota"
+                        model_progress[model_name]["text"] = "  Quota ✕"
                         print_status_table()
                         await save_progress(df, output_file)
                         return
@@ -524,25 +530,30 @@ async def process_model(
                         if rate_limit_count >= 3 and model_name == "grok":
                             cooldown_minutes = 15
                             print(
-                                f"\nGrok rate limited. Pausing for {cooldown_minutes} minutes..."
+                                f"\n⚠️  Grok rate limited. Pausing for {cooldown_minutes} minutes..."
                             )
                             model_progress[model_name][
                                 "status"
-                            ] = f"Cooling {cooldown_minutes}m"
+                            ] = f"cooling"
+                            model_progress[model_name][
+                                "text"
+                            ] = f"Chill {cooldown_minutes}m"
                             print_status_table()
                             await save_progress(df, output_file)
                             await asyncio.sleep(cooldown_minutes * 60)
                             rate_limit_count = 0
-                            model_progress[model_name]["status"] = "Running"
+                            model_progress[model_name]["status"] = "running"
+                            model_progress[model_name]["text"] = " Running ⏯"
                             print_status_table()
                             continue
 
                     error_count += 1
                     if error_count >= 5:
                         print(
-                            f"\n{model_name} failed after 5 errors. Last error: {reason}"
+                            f"\n❌ {model_name} failed after 5 errors. Last error: {reason}"
                         )
-                        model_progress[model_name]["status"] = "Failed ❌"
+                        model_progress[model_name]["status"] = "failed"
+                        model_progress[model_name]["text"] = " Failed ✕"
                         print_status_table()
                         await save_progress(df, output_file)
                         return
@@ -554,8 +565,8 @@ async def process_model(
                 df.at[idx, f"prediction_{model_name}"] = pred
                 df.at[idx, f"reasoning_{model_name}"] = reason
 
-                print(f"{model_name} prediction: {pred}")
-                print(f"Reasoning: {reason}")
+                print(f"➡️  {model_name} prediction: {pred}")
+                print(f"➡️  Reasoning: {reason}")
 
                 # Update progress
                 has_prediction = ~df[f"prediction_{model_name}"].isna()
@@ -569,21 +580,23 @@ async def process_model(
 
             except Exception as e:
                 error_str = str(e)
-                print(f"\nUnexpected error from {model_name}: {error_str}")
+                print(f"\n⚠️  Unexpected error from {model_name}: {error_str}")
                 model_progress[model_name]["last_error"] = error_str
                 error_count += 1
 
                 if error_count >= 5:
                     print(
-                        f"\n{model_name} failed after 5 unexpected errors. Last error: {error_str}"
+                        f"\n❌ {model_name} failed after 5 unexpected errors. Last error: {error_str}"
                     )
-                    model_progress[model_name]["status"] = "Failed ❌"
+                    model_progress[model_name]["status"] = "failed"
+                    model_progress[model_name]["text"] = " Failed ✕"
                     print_status_table()
                     await save_progress(df, output_file)
                     return
                 continue
 
-    model_progress[model_name]["status"] = "Complete ✓"
+    model_progress[model_name]["status"] = "complete"
+    model_progress[model_name]["text"] = "Success ✓"
     print_status_table()
     await save_progress(df, output_file)
 
@@ -594,6 +607,16 @@ def calculate_consensus_prediction(df: pd.DataFrame) -> pd.Series:
     models = ["gpt4", "claude", "gemini", "perplexity", "grok", "deepseek"]
 
     def get_consensus(row):
+        # Get all missing columns
+        missing_cols = [
+            f"prediction_{model}" for model in models if f"prediction_{model}" not in row
+        ]
+
+        if missing_cols:
+            # Mind two spaces after warning unicode
+            print(f"⚠️  Missing columns: {missing_cols}")
+            return None  
+        
         # Get all predictions for this row
         predictions = [row[f"prediction_{model}"] for model in models]
         # Count valid predictions (ignore None/NaN)
@@ -633,7 +656,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
     # Drop any unnamed columns from input
     unnamed_cols = [col for col in input_df.columns if "Unnamed:" in col]
     if unnamed_cols:
-        print(f"Dropping unnamed columns from input: {unnamed_cols}")
+        print(f"➡️  Dropping unnamed columns from input: {unnamed_cols}")
         input_df = input_df.drop(columns=unnamed_cols)
 
     total_tweets = len(input_df)
@@ -643,20 +666,20 @@ async def classify_tweets_async(input_file: str, output_file: str):
         df = pd.read_csv(
             output_file, quoting=csv.QUOTE_ALL, escapechar="\\", on_bad_lines="warn"
         )
-        print(f"\nLoaded existing progress from {output_file}")
+        print(f"\n🔎 Loaded existing progress from {output_file}")
 
         # Drop any unnamed columns from output
         unnamed_cols = [col for col in df.columns if "Unnamed:" in col]
         if unnamed_cols:
-            print(f"Dropping unnamed columns from output: {unnamed_cols}")
+            print(f"➡️  Dropping unnamed columns from output: {unnamed_cols}")
             df = df.drop(columns=unnamed_cols)
 
         # Verify we have all the original tweets
         if len(df) != total_tweets:
             print(
-                f"\nWarning: Output file has {len(df)} tweets but input has {total_tweets}"
+                f"\n⚠️  Warning: Output file has {len(df)} tweets but input has {total_tweets}"
             )
-            print("Using input file as base and copying over existing predictions...")
+            print("🔎 Using input file as base and copying over existing predictions...")
             # Create a new DataFrame with all input tweets
             new_df = input_df.copy()
 
@@ -669,11 +692,11 @@ async def classify_tweets_async(input_file: str, output_file: str):
 
             # Create a mapping key - if tweet_id exists in both, use it, otherwise use normalised context
             if "tweet_id" in df.columns and "tweet_id" in new_df.columns:
-                print("Using tweet_id for mapping predictions")
+                print("🔎 Using tweet_id for mapping predictions")
                 df["key"] = df["tweet_id"].astype(str)
                 new_df["key"] = new_df["tweet_id"].astype(str)
             else:
-                print("Using normalised context for mapping predictions")
+                print("🔎 Using normalised context for mapping predictions")
                 df["key"] = df["context"].apply(normalise_text)
                 new_df["key"] = new_df["context"].apply(normalise_text)
 
@@ -694,7 +717,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
 
                     # Count non-null predictions
                     completed = new_df[f"prediction_{model}"].notna().sum()
-                    print(f"Copied {completed} predictions for {model}")
+                    print(f"✅ Copied {completed} predictions for {model}")
 
             # Remove the temporary key column
             new_df = new_df.drop("key", axis=1)
@@ -704,7 +727,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
             df.to_csv(output_file, index=False)
 
     except FileNotFoundError:
-        print(f"\nNo existing progress found, starting fresh")
+        print(f"\n🔄 No existing progress found, starting fresh")
         df = input_df.copy()
 
     # Initialise consensus column if it doesn't exist
@@ -712,25 +735,33 @@ async def classify_tweets_async(input_file: str, output_file: str):
         df["consensus_prediction"] = None
 
     # Initialise columns if they don't exist
-    models = {"grok": get_grok_prediction}
-
+    models = {
+        "grok": get_grok_prediction,
+        "deepseek": get_deepseek_prediction,
+        "gpt4": get_gpt4_prediction,
+        "claude": get_claude_prediction,
+        "gemini": get_gemini_prediction,
+        "perplexity": get_perplexity_prediction,
+    }
+    
     # Initialise progress for all models with total_tweets as denominator
     for model in models.keys():
         # Initialise prediction columns if they don't exist
         if f"prediction_{model}" not in df.columns:
             df[f"prediction_{model}"] = None
             df[f"reasoning_{model}"] = None
-            print(f"Initialised columns for {model}")
+            print(f"✅ Initialised columns for {model}")
 
         # Count how many predictions we already have
         has_prediction = ~df[f"prediction_{model}"].isna()
         completed = sum(has_prediction)
-        print(f"Found {completed} existing predictions for {model}")
+        print(f"✅ Found {completed} existing predictions for {model}")
 
         model_progress[model] = {
             "processed": completed,
             "total": total_tweets,
-            "status": "Complete ✓" if completed == total_tweets else "Waiting",
+            "status": "complete" if completed == total_tweets else "waiting",
+            "text": "Success ✓" if completed == total_tweets else "Waiting 𝌗",
             "last_error": None,
         }
 
@@ -762,17 +793,17 @@ async def classify_tweets_async(input_file: str, output_file: str):
     # Create tasks for each model with their pending tweets
     tasks = []
     for model_name, model_func in models.items():
-        # Find tweets that need this model's prediction, starting from index 6878
+        # Find tweets that need this model's prediction
         needs_processing = df[f"prediction_{model_name}"].isna()
         tweets_to_process = [
             (idx, row["context"])
             for idx, row in df[needs_processing].iterrows()
-            if idx >= 6878
-        ]  # Only process tweets from index 6878 onwards
+            if idx >= 0
+        ]
 
         if tweets_to_process:
             print(
-                f"\nStarting {model_name} with {len(tweets_to_process)} tweets to process"
+                f"\n🔎 Starting {model_name} with {len(tweets_to_process)} tweets to process"
             )
             tasks.append(
                 process_model(
@@ -782,21 +813,22 @@ async def classify_tweets_async(input_file: str, output_file: str):
 
     if tasks:
         try:
+            time.sleep(1)
             await asyncio.gather(*tasks)
         except Exception as e:
-            print("\nError encountered during processing!")
+            print("\n❌ Error encountered during processing!")
             print_status_table()
 
             # Check if Gemini failed
-            if model_progress["gemini"]["status"] == "Failed ❌":
-                print("\nGemini model failed. Would you like to:")
+            if model_progress["gemini"]["status"] == "failed":
+                print("\n❌ Gemini model failed. Would you like to:")
                 print("1. Retry with adjusted safety settings")
                 print("2. Skip Gemini and continue with other models")
                 print("3. Stop processing entirely")
 
                 choice = input("\nEnter your choice (1-3): ")
                 if choice == "1":
-                    print("\nRetrying Gemini with adjusted settings...")
+                    print("\n➡️  Retrying Gemini with adjusted settings...")
                     # Reset Gemini progress
                     needs_processing = df["prediction_gemini"].isna()
                     tweets_to_process = [
@@ -806,7 +838,8 @@ async def classify_tweets_async(input_file: str, output_file: str):
                     model_progress["gemini"] = {
                         "processed": total_tweets - len(tweets_to_process),
                         "total": total_tweets,
-                        "status": "Retrying",
+                        "status": "retrying",
+                        "text": "Retrying ↺",
                         "last_error": None,
                     }
                     await process_model(
@@ -817,13 +850,13 @@ async def classify_tweets_async(input_file: str, output_file: str):
                         output_file,
                     )
                 elif choice == "2":
-                    print("\nSkipping Gemini, continuing with other models...")
+                    print("\n⚠️  Skipping Gemini, continuing with other models...")
                     remaining_tasks = [
                         t for t in tasks if t._coro.__name__ != "process_model_gemini"
                     ]
                     await asyncio.gather(*remaining_tasks)
                 else:
-                    print("\nStopping all processing...")
+                    print("\n❌ Stopping all processing...")
                     return
 
     # Final consensus calculation and save
@@ -846,7 +879,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
     df = df[cols]
     df.to_csv(output_file, index=False)
 
-    print("\nProcessing complete!")
+    print("\n✅ Processing complete!")
 
 
 if __name__ == "__main__":

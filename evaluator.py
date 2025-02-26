@@ -24,8 +24,8 @@ class CryptoConsensusAnalyser:
             raise ValueError("COINGECKO_API_KEY not found in environment variables")
 
         self.cg = CoinGeckoAPI()
-        self.base_url = "https://pro-api.coingecko.com/api/v3"
-        self.headers = {"Accept": "application/json", "X-Cg-Pro-Api-Key": self.api_key}
+        self.base_url = "https://api.coingecko.com/api/v3"
+        self.headers = {"Accept": "application/json", "X-Cg-Api-Key": self.api_key}
         self.output_file = None
         self.error_count = 0
 
@@ -92,17 +92,17 @@ class CryptoConsensusAnalyser:
 
         # Test API connection
         try:
-            print("Testing API connection...")
+            print("🔎 Testing API connection...")
             response = requests.get(f"{self.base_url}/ping", headers=self.headers)
             if response.status_code == 200:
-                print(f"Pro API connection successful: {response.json()}")
+                print(f"✅ API connection successful: {response.json()}")
             else:
                 print(
-                    f"Pro API connection failed: {response.status_code} - {response.text}"
+                    f"❌ API connection failed: {response.status_code} - {response.text}"
                 )
-                raise Exception("Failed to connect to Pro API")
+                raise Exception("Failed to connect to API")
         except Exception as e:
-            print(f"Warning: Could not connect to CoinGecko Pro API: {str(e)}")
+            print(f"⚠️  Warning: Could not connect to CoinGecko API: {str(e)}")
             raise
 
     def determine_target_type(self, target: str) -> Tuple[str, str]:
@@ -127,7 +127,7 @@ class CryptoConsensusAnalyser:
 
         # If not found in mappings, try to search CoinGecko
         try:
-            print(f"Attempting to find match for unknown target: {target}")
+            print(f"🔎 Attempting to find match for unknown target: {target}")
             url = f"{self.base_url}/search"
             params = {"query": target}
             response = requests.get(
@@ -142,12 +142,12 @@ class CryptoConsensusAnalyser:
                     # Get the first (most relevant) result
                     best_match = coins[0]
                     print(
-                        f"Found potential match: {best_match['id']} ({best_match['name']})"
+                        f"✅ Found potential match: {best_match['id']} ({best_match['name']})"
                     )
                     return "token", best_match["id"]
 
         except Exception as e:
-            print(f"Error in semantic search: {str(e)}")
+            print(f"❌ Error in semantic search: {str(e)}")
 
         # If all attempts fail, treat as unknown
         return "unknown", target
@@ -158,7 +158,7 @@ class CryptoConsensusAnalyser:
             return None
 
         try:
-            print(f"Getting current price for {target_type} {target_id}...")
+            print(f"🔎 Getting current price for {target_type} {target_id}...")
             if target_type == "token":
                 url = f"{self.base_url}/simple/price"
                 params = {"ids": target_id, "vs_currencies": "usd"}
@@ -169,7 +169,7 @@ class CryptoConsensusAnalyser:
                     data = response.json()
                     price = data.get(target_id, {}).get("usd")
                     if price is not None:
-                        print(f"Current price for {target_id}: {price}")
+                        print(f"✅ Current price for {target_id}: {price}")
                         return price
             else:
                 # For categories, use the markets endpoint
@@ -192,11 +192,11 @@ class CryptoConsensusAnalyser:
                         if price is not None:
                             print(f"Current category price for {target_id}: {price}")
                             return price
-            print(f"API Response: Status {response.status_code}")
+            print(f"🔎 API Response: Status {response.status_code}")
             if response.status_code != 200:
-                print(f"Error response: {response.text}")
+                print(f"❌ Error response: {response.text}")
         except Exception as e:
-            print(f"Error getting current price: {str(e)}")
+            print(f"❌ Error getting current price: {str(e)}")
         return None
 
     def get_historical_price(
@@ -209,7 +209,7 @@ class CryptoConsensusAnalyser:
         try:
             date_str = date.strftime("%d-%m-%Y")
             print(
-                f"Getting historical price for {target_type} {target_id} at {date_str}..."
+                f"🔎 Getting historical price for {target_type} {target_id} at {date_str}..."
             )
 
             if target_type == "token":
@@ -224,7 +224,7 @@ class CryptoConsensusAnalyser:
                         data.get("market_data", {}).get("current_price", {}).get("usd")
                     )
                     if price is not None:
-                        print(f"Historical price for {target_id}: {price}")
+                        print(f"✅ Historical price for {target_id}: {price}")
                         return price
             else:
                 # For categories, use the markets endpoint
@@ -246,13 +246,13 @@ class CryptoConsensusAnalyser:
                     if data and len(data) > 0:
                         price = data[0].get("current_price")
                         if price is not None:
-                            print(f"Historical category price for {target_id}: {price}")
+                            print(f"✅ Historical category price for {target_id}: {price}")
                             return price
-            print(f"API Response: Status {response.status_code}")
+            print(f"🔎 API Response: Status {response.status_code}")
             if response.status_code != 200:
-                print(f"Error response: {response.text}")
+                print(f"❌ Error response: {response.text}")
         except Exception as e:
-            print(f"Error getting historical price: {str(e)}")
+            print(f"❌ Error getting historical price: {str(e)}")
         return None
 
     def save_results(self, results: List[Dict], final: bool = False):
@@ -280,13 +280,13 @@ class CryptoConsensusAnalyser:
         self, predictions_df: pd.DataFrame, output_file: str
     ) -> pd.DataFrame:
         """Process predictions and calculate metrics"""
-        print(f"\nStarting to process {len(predictions_df)} predictions...")
+        print(f"\n🔎 Starting to process {len(predictions_df)} predictions...")
         self.output_file = output_file
 
         # Clear the output file if it exists
         if os.path.exists(self.output_file):
             os.remove(self.output_file)
-            print(f"Cleared existing output file: {self.output_file}")
+            print(f"✅ Cleared existing output file: {self.output_file}")
 
         results = []
         total = len(predictions_df)
@@ -302,11 +302,11 @@ class CryptoConsensusAnalyser:
             for _, row in batch.iterrows():
                 processed += 1
                 print(
-                    f"\nProcessing prediction {processed}/{total} ({(processed/total*100):.1f}%)"
+                    f"\n🔎 Processing prediction {processed}/{total} ({(processed/total*100):.1f}%)"
                 )
-                print(f"Tweet ID: {row['tweet_id']}")
-                print(f"Target: {row['consensus_target']}")
-                print(f"Sentiment: {row['consensus_sentiment']}")
+                print(f"➡️  Tweet ID: {row['tweet_id']}")
+                print(f"➡️  Target: {row['consensus_target']}")
+                print(f"➡️  Sentiment: {row['consensus_sentiment']}")
 
                 error_occurred = False
                 error_type = None
@@ -317,14 +317,14 @@ class CryptoConsensusAnalyser:
                         row["consensus_target"]
                     )
                     print(
-                        f"Determined target type: {target_type}, token: {target_token}"
+                        f"✅ Determined target type: {target_type}, token: {target_token}"
                     )
 
                     if target_type == "unknown":
                         error_occurred = True
                         error_type = "unknown_target"
                         error_types["unknown_target"] += 1
-                        print(f"Unknown target: {row['consensus_target']}")
+                        print(f"⚠️  Unknown target: {row['consensus_target']}")
                     else:
                         # Get timestamps
                         created_at = pd.to_datetime(row["createdAt"]).tz_localize(None)
@@ -342,10 +342,10 @@ class CryptoConsensusAnalyser:
                             error_occurred = True
                             error_type = "price_lookup"
                             error_types["price_lookup"] += 1
-                            print("Failed to get valid prices")
+                            print("❌ Failed to get valid prices")
                         else:
                             print(
-                                f"Got prices - Start: {starting_price:.4f}, End: {ending_price:.4f}"
+                                f"✅ Got prices - Start: {starting_price:.4f}, End: {ending_price:.4f}"
                             )
                             # Calculate percentage change
                             pct_change = (
@@ -375,7 +375,7 @@ class CryptoConsensusAnalyser:
                     error_occurred = True
                     error_type = "other"
                     error_types["other"] += 1
-                    print(f"Error processing prediction: {str(e)}")
+                    print(f"❌ Error processing prediction: {str(e)}")
 
                 # Increment error count if needed
                 if error_occurred:
@@ -407,16 +407,16 @@ class CryptoConsensusAnalyser:
             self.save_results(results[-len(batch) :])
 
             # Display progress
-            if processed % 10 == 0:
+            if processed % batch_size == 0:
                 self.display_progress(processed, total, error_types)
 
             # Sleep between batches to respect rate limits
             if i + batch_size < len(predictions_df):
-                print("\nWaiting between batches...")
+                print("\n🔎 Waiting between batches...")
                 time.sleep(1)
 
         # Display final stats
-        print("\nFinal Results:")
+        print("\n➡️  Final Results:")
         self.display_progress(processed, total, error_types)
 
         return pd.DataFrame(results)
@@ -427,70 +427,71 @@ class CryptoConsensusAnalyser:
         error_percentage = (self.error_count / processed * 100) if processed > 0 else 0
 
         # Print progress table
+        progress_str = f"{processed}/{total}"
         print("\n=== Tweet Processing Status ===")
-        print("┌─────────────┬───────────────┬──────────┬─────────────────┐")
-        print("│ Metric      │ Count         │ Status   │ % of Total      │")
-        print("├─────────────┼───────────────┼──────────┼─────────────────┤")
+        print("┌─────────────┬───────────────┬───────────┬────────────┐")
+        print("│ Metric      │ Count         │ Status    │ % of Total │")
+        print("├─────────────┼───────────────┼───────────┼────────────┤")
         print(
-            f"│ Progress    │ {processed:>6,}/{total:<6,} │ Running  │ {progress:>6.1f}%         │"
+            f"│ Progress    │ {progress_str:13} │ Running ⏯ │ {progress:>6.1f}%    │"
         )
-        print("├─────────────┼───────────────┼──────────┼─────────────────┤")
+        print("├─────────────┼───────────────┼───────────┼────────────┤")
         print(
-            f"│ Errors      │ {self.error_count:>13,} │ Active   │ {error_percentage:>6.1f}%         │"
+            f"│ Errors      │ {self.error_count:<13,} │  Active ✓ │ {error_percentage:>6.1f}%    │"
         )
-        print("└─────────────┴───────────────┴──────────┴─────────────────┘")
+        print("└─────────────┴───────────────┴───────────┴────────────┘")
 
         # Print error breakdown
         if processed > 0:
             print("\n=== Error Breakdown ===")
-            print("┌─────────────┬───────────────┬─────────────────┐")
-            print("│ Error Type  │ Count         │ % of Errors     │")
-            print("├─────────────┼───────────────┼─────────────────┤")
+            print("┌─────────────────┬───────────────┬─────────────────┐")
+            print("│ Error Type      │ Count         │ % of Errors     │")
+            print("├─────────────────┼───────────────┼─────────────────┤")
             for error_type, count in error_types.items():
                 error_pct = (
                     (count / self.error_count * 100) if self.error_count > 0 else 0
                 )
                 print(
-                    f"│ {error_type:<11} │ {count:>13,} │ {error_pct:>6.1f}%         │"
+                    f"│ {error_type:<15} │ {count:<13,} │ {error_pct:>6.1f}%         │"
                 )
-            print("└─────────────┴───────────────┴─────────────────┘")
+            print("└─────────────────┴───────────────┴─────────────────┘")
 
         # Force output to display immediately
         sys.stdout.flush()
 
 
 def main():
-    input_file = os.path.expanduser("./results/{user}/extractor.csv")
-    output_file = os.path.expanduser("./results/{user}/evaluator.csv")
+    input_file = os.path.expanduser(f"./results/{user}/extractor.csv")
+    output_file = os.path.expanduser(f"./results/{user}/evaluator.csv")
 
-    print("\nInitialising analyser...")
+    print("\n🔎 Initialising analyser...")
     analyser = CryptoConsensusAnalyser()
 
     try:
         # Read input file
-        print("\nReading input file...")
+        print("\n🔎 Reading input file...")
         df = pd.read_csv(input_file)
-        print(f"Read {len(df)} rows from {input_file}")
+        print(f"✅ Read {len(df)} rows from {input_file}")
 
         # Process all predictions
-        print("\nStarting prediction processing...")
+        print("\n🔎 Starting prediction processing...")
         results_df = analyser.process_predictions(df, output_file)
-        print("\nProcessing complete!")
+        print("\n✅ Processing complete!")
 
         if os.path.exists(output_file):
             # Read and display summary of results
             final_results = pd.read_csv(output_file)
-            print(f"\nProcessed {len(final_results)} rows")
-            print("\nColumns in output file:")
+            print(f"\n✅ Processed {len(final_results)} rows")
+            print("\n➡️  Columns in output file:")
             for col in final_results.columns:
                 print(f"- {col}")
 
             # Display sample of first few rows
-            print("\nSample of first few rows:")
+            print("\n➡️  Sample of first few rows:")
             print(final_results.head().to_string())
 
     except Exception as e:
-        print(f"\nError: {str(e)}")
+        print(f"\n❌ Error: {str(e)}")
         raise
 
 

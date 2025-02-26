@@ -128,7 +128,7 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 
 # Global progress tracking
 model_progress = defaultdict(
-    lambda: {"processed": 0, "total": 0, "status": "Waiting ⏳", "last_error": None}
+    lambda: {"processed": 0, "total": 0, "status": "waiting", "text": "Waiting 𝌗", "last_error": None}
 )
 
 
@@ -143,7 +143,8 @@ def initialise_model_progress(prediction_count: int, start_idx: int = 0):
         model_progress[model] = {
             "processed": 0,  # Reset to 0
             "total": prediction_count,
-            "status": "Waiting ⏳",
+            "status": "waiting",
+            "text": "Waiting 𝌗",
             "last_error": None,
         }
 
@@ -168,12 +169,12 @@ def print_status_table():
         progress = model_progress[model]
         progress_str = f"{progress['processed']}/{progress['total']}"
         status = progress["status"]
-
+        text = progress["text"]
         model_str = f"{model:10}"
         progress_str = f"{progress_str:12}"
         status_str = f"{status:11}"
-
-        print(f"│ {model_str} │ {progress_str} │ {status_str} │")
+        text_str = f"{text:11}"
+        print(f"│ {model_str} │ {progress_str} │ {text_str} │")
 
     print("└────────────┴──────────────┴─────────────┘")
     sys.stdout.flush()  # Force flush output
@@ -568,7 +569,7 @@ class TargetExtractor:
         tasks = []
         for model_name, model_func in models.items():
             if model_progress[model_name]["status"] not in [
-                "Failed ❌"
+                "failed"
             ]:  # Only exclude permanently failed models
                 task = asyncio.create_task(
                     self._run_model(model_name, model_func, text, timestamp)
@@ -680,7 +681,8 @@ class TargetExtractor:
     ):
         """Run a single model and handle its results/errors"""
         try:
-            model_progress[model_name]["status"] = "Running ⏳"
+            model_progress[model_name]["status"] = "running"
+            model_progress[model_name]["text"] = "Running ⏯"
             print_status_table()
 
             # Execute model with timeout
@@ -690,7 +692,8 @@ class TargetExtractor:
                 )  # Shorter individual timeout
 
                 if not isinstance(result, dict) or "targets" not in result:
-                    model_progress[model_name]["status"] = "Error ⚠️"
+                    model_progress[model_name]["status"] = "error"
+                    model_progress[model_name]["text"] = "  Error ✕"
                     print_status_table()
                     return
 
@@ -700,9 +703,11 @@ class TargetExtractor:
 
                 # Update status based on result
                 if "rate limit" in result.get("reasoning", "").lower():
-                    model_progress[model_name]["status"] = "Rate Limited ⏳"
+                    model_progress[model_name]["status"] = "quota"
+                    model_progress[model_name]["text"] = "  Quota ✕"
                 else:
-                    model_progress[model_name]["status"] = "Running ⏳"
+                    model_progress[model_name]["status"] = "running"
+                    model_progress[model_name]["text"] = "Running ⏯"
 
                 # Save progress after each successful model extraction
                 self._save_model_progress(
@@ -711,16 +716,19 @@ class TargetExtractor:
                 print_status_table()
 
             except asyncio.TimeoutError:
-                model_progress[model_name]["status"] = "Timeout ⏳"
+                model_progress[model_name]["status"] = "timeout"
+                model_progress[model_name]["text"] = "Timeout ✕"
                 print_status_table()
                 return
 
         except Exception as e:
             error_str = str(e)
             if "quota" in error_str.lower() or "credit" in error_str.lower():
-                model_progress[model_name]["status"] = "Failed ❌"
+                model_progress[model_name]["status"] = "failed"
+                model_progress[model_name]["text"] = " Failed ✕"
             else:
-                model_progress[model_name]["status"] = "Error ⚠️"
+                model_progress[model_name]["status"] = "error"
+                model_progress[model_name]["text"] = "  Error ✕"
             print_status_table()
 
     def _save_model_progress(self, model_name: str, processed_count: int):
@@ -785,9 +793,9 @@ class TargetExtractor:
 
             # Only include valid predictions
             if target and target not in [
-                "Error: Failed ❌",
-                "Error: Error ⚠️",
-                "Error: Timeout ⏳",
+                "Error: failed",
+                "Error: error",
+                "Error: timeout",
             ]:
                 valid_targets.append(target)
                 if sentiment and sentiment not in ["No sentiment", "unknown"]:
@@ -829,23 +837,23 @@ class TargetExtractor:
             await self.init_session()
 
             # Read and validate input file
-            print("Reading input file...")
+            print("🔎 Reading input file...")
             df = pd.read_csv(input_file)
 
             # Filter for predictions only
             df = df[df["consensus_prediction"] == "Prediction"].copy()
             df["createdAt"] = pd.to_datetime(df["createdAt"])
             total_predictions = len(df)
-            print(f"Processing {total_predictions} predictions")
+            print(f"🔎 Processing {total_predictions} predictions")
 
             # Load checkpoint if exists
             start_idx = self._load_checkpoint() or 0
             if start_idx > 0:
-                print(f"Resuming from checkpoint at index {start_idx}")
+                print(f"🔎 Resuming from checkpoint at index {start_idx}")
                 if os.path.exists(output_file):
                     existing_df = pd.read_csv(output_file)
                     if len(existing_df) != start_idx:
-                        print("Warning: Checkpoint mismatch. Starting from beginning.")
+                        print("⚠️  Warning: Checkpoint mismatch. Starting from beginning.")
                         start_idx = 0
 
             # Initialise progress for Gemini and Grok only
@@ -856,7 +864,8 @@ class TargetExtractor:
                 model_progress[model] = {
                     "processed": 0,
                     "total": total_predictions,
-                    "status": "Waiting ⏳",
+                    "status": "waiting",
+                    "text": "Waiting 𝌗",
                     "last_error": None,
                 }
             print_status_table()
@@ -882,16 +891,16 @@ class TargetExtractor:
                 output_df = pd.DataFrame(columns=column_order)
                 output_df.to_csv(output_file, index=False)
                 print(
-                    f"Created new output file with columns: {', '.join(column_order)}"
+                    f"✅ Created new output file with columns: {', '.join(column_order)}"
                 )
 
             # Process each prediction sequentially
             for idx, row in df.iloc[start_idx:].iterrows():
                 try:
-                    print(f"\nProcessing tweet {idx + 1}/{total_predictions}:")
-                    print(f"Tweet ID: {row['tweet_id']}")
-                    print(f"Created At: {row['createdAt']}")
-                    print(f"Context: {row['context'][:100]}...")
+                    print(f"\n🔎 Processing tweet {idx + 1}/{total_predictions}:")
+                    print(f"➡️  Tweet ID: {row['tweet_id']}")
+                    print(f"➡️  Created At: {row['createdAt']}")
+                    print(f"➡️  Context: {row['context'][:100]}...")
 
                     result = await self.extract_target(row["context"], row["createdAt"])
 
@@ -925,7 +934,7 @@ class TargetExtractor:
                             )
                         else:
                             status = model_progress[model]["status"]
-                            if status in ["Failed ❌", "Error ⚠️", "Timeout ⏳"]:
+                            if status in ["failed", "error", "timeout"]:
                                 error_msg = f"Error: {status}"
                             else:
                                 error_msg = "No target found"
@@ -950,7 +959,7 @@ class TargetExtractor:
                     # Save checkpoint
                     self._save_checkpoint(idx + 1)
 
-                    print(f"Saved results for tweet {idx + 1}")
+                    print(f"✅ Saved results for tweet {idx + 1}")
                     print(
                         f"Consensus - Target: {consensus_target}, Sentiment: {consensus_sentiment}"
                     )
@@ -958,14 +967,14 @@ class TargetExtractor:
                     print_status_table()
 
                 except Exception as e:
-                    print(f"Error processing row {idx}: {str(e)}")
+                    print(f"❌ Error processing row {idx}: {str(e)}")
                     continue
 
-            print("\nProcessing complete!")
+            print("\n✅ Processing complete!")
             print_status_table()
 
         except Exception as e:
-            print(f"Error processing file: {str(e)}")
+            print(f"❌ Error processing file: {str(e)}")
             raise
 
         finally:
@@ -977,52 +986,52 @@ class TargetExtractor:
         backup_file = os.path.join(CHECKPOINT_DIR, f"backup_{timestamp}.json")
         with open(backup_file, "w") as f:
             json.dump(results, f)
-        logging.info(f"Backup saved: {backup_file}")
+        logging.info(f"✅ Backup saved: {backup_file}")
 
 
 async def check_files():
-    print("\nChecking files and configuration...")
-    input_file = "./results/{user}/classified.csv"
+    print("\n🔎 Checking files and configuration...")
+    input_file = f"./results/{user}/classifier.csv"
     if not os.path.exists(input_file):
-        print(f"Input file not found: {input_file}")
+        print(f"❌ Input file not found: {input_file}")
         return False
 
-    print(f"Input file found: {input_file}")
+    print(f"✅ Input file found: {input_file}")
 
     try:
-        print("Reading input file...")
+        print("🔎 Reading input file...")
         df = pd.read_csv(input_file)
-        print(f"Total rows in input file: {len(df)}")
+        print(f"➡️  Total rows in input file: {len(df)}")
 
         # Ensure required columns exist
         required_columns = ["tweet_id", "createdAt", "context", "consensus_prediction"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            print(f"Missing required columns: {missing_columns}")
+            print(f"❌ Missing required columns: {missing_columns}")
             return False
 
         # Filter for actual predictions using consensus_prediction column
-        print("Filtering predictions...")
+        print("🔎 Filtering predictions...")
         predictions_df = df[df["consensus_prediction"] == "Prediction"].copy()
         prediction_count = len(predictions_df)
 
         print(
-            f"Found {prediction_count} predictions to process out of {len(df)} total rows"
+            f"✅ Found {prediction_count} predictions to process out of {len(df)} total rows"
         )
 
         if prediction_count == 0:
-            print("No predictions found to process. Exiting...")
+            print("❌ No predictions found to process. Exiting...")
             return False
 
-        print("Converting timestamps...")
+        print("🔎 Converting timestamps...")
         predictions_df["createdAt"] = pd.to_datetime(predictions_df["createdAt"])
 
         # Sort by createdAt to ensure chronological processing
         predictions_df = predictions_df.sort_values("createdAt")
 
         # Save filtered predictions
-        cleaned_file = "./results/{user}/cleaned.csv"
-        print(f"Saving filtered predictions to: {cleaned_file}")
+        cleaned_file = f"./results/{user}/cleaned.csv"
+        print(f"🔎 Saving filtered predictions to: {cleaned_file}")
         predictions_df.to_csv(cleaned_file, index=False)
 
         # Initialise progress tracking with fresh counters - only for Gemini and Grok
@@ -1032,7 +1041,8 @@ async def check_files():
             model_progress[model] = {
                 "processed": 0,
                 "total": prediction_count,
-                "status": "Waiting ⏳",
+                "status": "waiting",
+                "text": "Waiting 𝌗",
                 "last_error": None,
             }
         print_status_table()
@@ -1040,27 +1050,27 @@ async def check_files():
         return True
 
     except Exception as e:
-        print(f"Error reading input file: {str(e)}")
+        print(f"❌ Error reading input file: {str(e)}")
         return False
 
 
 async def main():
-    print("\nStarting extraction process...")
+    print("\n🔎 Starting extraction process...")
 
     if not await check_files():
-        print("Initialisation checks failed. Exiting...")
+        print("❌ Initialisation checks failed. Exiting...")
         return
 
     try:
-        print("\nInitialising extractor...")
+        print("\n🔎 Initialising extractor...")
         extractor = TargetExtractor()
-        input_file = "./results/{user}/classifier.csv"
-        output_file = "./results/{user}/extractor.csv"
-        print(f"\nProcessing file: {input_file}")
-        print(f"Output will be saved to: {output_file}")
+        input_file = f"./results/{user}/classifier.csv"
+        output_file = f"./results/{user}/extractor.csv"
+        print(f"\n🔎 Processing file: {input_file}")
+        print(f"🔎 Output will be saved to: {output_file}")
         await extractor.process_file(input_file, output_file)
     except Exception as e:
-        print(f"Error in main: {str(e)}")
+        print(f"❌ Error in main: {str(e)}")
         raise
 
 
@@ -1068,6 +1078,6 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logging.info("Process interrupted by user")
+        logging.info("❌ Process interrupted by user")
     except Exception as e:
-        logging.error(f"Fatal error: {str(e)}", exc_info=True)
+        logging.error(f"❌ Fatal error: {str(e)}", exc_info=True)
