@@ -2,7 +2,7 @@
 
 > This is a fork of original work done by [`David Lin`](https://github.com/davidlinjiahao) on [`frank-analyzer`](https://github.com/davidlinjiahao/frank_analyzer)
 
-A Python-based tool wrapped in Javascript that analyses tweets from any public `@` on X/Twitter using multiple Large Language Models (LLMs) and classifies them based on several abstract and user-provided metrics. 
+A Python-based tool wrapped in Javascript that analyses tweets from any public `@` on X/Twitter using multiple Large Language Models (LLMs) and classifies them based on several abstract and user-provided metrics.
 
 ## Features
 
@@ -17,6 +17,7 @@ A Python-based tool wrapped in Javascript that analyses tweets from any public `
 ## Setup
 
 ### 1. Clone the repository:
+
 ```bash
 git clone https://github.com/docal-pro/docal-ai.git
 cd docal-ai
@@ -46,7 +47,6 @@ pip install -r requirements.txt
 npm i
 ```
 
-
 ### 3. Set up environment variables in `.env`:
 
 ```
@@ -72,19 +72,42 @@ npm run init
 
 ### 2. Install dependencies
 
-#### 2.1 MacOS
-
 ```bash
-# Shortcut to install dependencies
-npm run i-apple # Apple M1/2/3/4
+npm run pip-install
 ```
 
-#### 2.2 Linux (Ubuntu)
+### 3. Start the proxy worker
 
 ```bash
-# Shortcut to install dependencies
-npm run i-linux # Linux Ubuntu 22.04+
+npm run proxy-dev
 ```
 
-### 3. Build
+### 4. Start the server
 
+```bash
+npm run server-start
+```
+
+### 5. Start the context creator for a specific `@user`
+
+```bash
+npm run context user
+```
+
+### 6. Start the classifier for a specific `@user`
+
+```bash
+npm run classify user
+```
+
+### 7. Start the extractor for a specific `@user`
+
+```bash
+npm run extract user
+```
+
+### 8. Start the evaluator for a specific `@user`
+
+```bash
+npm run evaluate user
+```

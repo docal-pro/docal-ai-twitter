@@ -1,4 +1,8 @@
 {
+  "name": "docal-ai",
+  "version": "0.0.1",
+  "description": "DOCAL AI",
+  "license": "MIT",
   "dependencies": {
     "agent-twitter-client": "^0.0.18",
     "axios": "^1.7.9",
@@ -10,12 +14,15 @@
   "type": "module",
   "scripts": {
     "init": "[ \"$(uname)\" = \"Linux\" ] && sh venv/bin/activate && python3 -m venv venv",
-    "i-apple": "pip install -r requirements_apple.txt",
-    "i-linux": "pip install -r requirements_linux.txt",
-    "p-dev": "wrangler dev",
-    "p-deploy": "wrangler deploy",
-    "p-build": "wrangler build",
-    "s-start": "node server/server.js"
+    "pip-install": "sh -c \"if [[ $(uname) == 'Darwin' ]]; then pip install -r requirements_apple.txt; else pip install -r requirements_linux.txt; fi\"",
+    "proxy-dev": "wrangler dev",
+    "proxy-deploy": "wrangler deploy",
+    "proxy-build": "wrangler build",
+    "server-start": "node server/server.js",
+    "context": "python3 context.py",
+    "classify": "python3 classifier.py",
+    "extract": "python3 extractor.py",
+    "evaluate": "python3 evaluator.py"
   },
   "devDependencies": {
     "wrangler": "^3.109.2"
