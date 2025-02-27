@@ -56,6 +56,7 @@ GOOGLE_API_KEY=
 PERPLEXITY_API_KEY=
 GROK_API_KEY=
 DEEPSEEK_API_KEY=
+OPENROUTER_API_KEY=
 COINGECKO_API_KEY=
 TWITTER_USERNAME=
 TWITTER_PASSWORD=
@@ -73,6 +74,7 @@ npm run init
 ### 2. Install dependencies
 
 ```bash
+# Shortcut to install python dependencies
 npm run pip-install
 ```
 
