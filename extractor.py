@@ -40,7 +40,7 @@ logging.basicConfig(
     level=logging.INFO,  # Show all info messages
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("extractor.log"),  # Still log everything to file
+        logging.FileHandler("logs/extractor.log"),  # Still log everything to file
         logging.StreamHandler(
             sys.stdout
         ),  # But only show important messages in console
