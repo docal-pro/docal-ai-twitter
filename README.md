@@ -78,6 +78,12 @@ npm run init
 npm run pip-install
 ```
 
+#### 2.1. Install scraper
+
+```bash
+npm run install-scraper
+```
+
 ### 3. Start the proxy worker
 
 ```bash

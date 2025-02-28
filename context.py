@@ -451,7 +451,7 @@ class TweetContextBuilder:
 
         # Limit the number of tweets to process
         tweets = tweets[: self.limit]
-        print(f"🔎 Processing {len(tweets)} tweets...")
+        print(f"ℹ️  Processing {len(tweets)} tweets...")
 
         # Always append to preserve history
         file_exists = os.path.exists(self.output_file)

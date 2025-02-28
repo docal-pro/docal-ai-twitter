@@ -22,7 +22,9 @@
     "context": "python3 context.py",
     "classify": "python3 classifier.py",
     "extract": "python3 extractor.py",
-    "evaluate": "python3 evaluator.py"
+    "evaluate": "python3 evaluator.py",
+    "install-scraper": "git clone https://github.com/bisguzar/twitter-scraper.git && cd twitter-scraper && sudo python3 setup.py install && cd ..",
+    "scrape": "python3 scraper.py"
   },
   "devDependencies": {
     "wrangler": "^3.109.2"
