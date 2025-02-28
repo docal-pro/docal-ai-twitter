@@ -14,17 +14,18 @@
   "type": "module",
   "scripts": {
     "init": "[ \"$(uname)\" = \"Linux\" ] && python3 -m venv venv && source venv/bin/activate",
-    "pip-install": "sh -c \"if [[ $(uname) == 'Darwin' ]]; then pip install -r requirements_apple.txt; else pip install -r requirements_linux.txt; fi\"",
+    "pip-install": "sh -c \"if [[ $(uname) == 'Darwin' ]]; then pip install -r requirements_darwin.txt; else pip install -r requirements_linux.txt; fi\"",
     "proxy-dev": "wrangler dev",
     "proxy-deploy": "wrangler deploy",
     "proxy-build": "wrangler build",
     "server-start": "node server/server.js",
-    "context": "python3 context.py",
-    "classify": "python3 classifier.py",
-    "extract": "python3 extractor.py",
-    "evaluate": "python3 evaluator.py",
+    "context": "python3 src/context.py",
+    "classify": "python3 src/classifier.py",
+    "extract": "python3 src/extractor.py",
+    "evaluate": "python3 src/evaluator.py",
     "install-scraper": "git clone https://github.com/bisguzar/twitter-scraper.git && cd twitter-scraper && sudo python3 setup.py install && cd ..",
-    "scrape": "python3 scraper.py"
+    "scrape": "python3 src/scraper.py",
+    "index": "python3 src/indexer.py"
   },
   "devDependencies": {
     "wrangler": "^3.109.2"

@@ -16,8 +16,8 @@ const { get } = axios;
 const app = express();
 app.use(json());
 
-const TWITTER_USERNAME = process.env.TWITTER_USERNAME;
-const TWITTER_PASSWORD = process.env.TWITTER_PASSWORD;
+// Twitter/X API Bearer Token
+const TWITTER_BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
 
 // Utility function to check if a file exists and is not empty
 const fileExistsAndNotEmpty = (filePath) => {
@@ -31,7 +31,19 @@ app.post("/process", (req, res) => {
     return res.status(400).json({ error: "Missing function or data" });
   }
 
-  const filePath = join(__dirname, `${data}/${func}.json`);
+  let filePath;
+  let tweetId;
+  let user;
+  if (func !== "scraper" && func !== "indexer") {
+    filePath = join(__dirname, `results/${user}/${func}.csv`);
+    user = data;
+  } else if (func === "indexer") {
+    filePath = join(__dirname, `tweets/${user}/tweets.json`);
+    user = data;
+  } else if (func === "scraper") {
+    filePath = join(__dirname, `tweets/${user}/input.json`);
+    tweetId = data;
+  }
 
   if (!fileExistsAndNotEmpty(filePath)) {
     try {
@@ -39,7 +51,10 @@ app.post("/process", (req, res) => {
     } catch (err) {}
   }
 
-  const command = `python3 ${func}.py ${data}`;
+  const command =
+    func !== "scraper"
+      ? `python3 ${func}.py ${user}`
+      : `python3 ${func}.py ${tweetId}`;
   exec(command, (error, stdout, stderr) => {
     if (error) {
       return res.status(500).json({ error: stderr || error.message });
@@ -50,12 +65,12 @@ app.post("/process", (req, res) => {
 
 // Method: state
 app.post("/state", (req, res) => {
-  const { function: func, data } = req.body;
-  if (!func || !data) {
-    return res.status(400).json({ error: "Missing function or data" });
+  const { function: func, user } = req.body;
+  if (!func || !user) {
+    return res.status(400).json({ error: "Missing function or user" });
   }
 
-  const filePath = join(__dirname, `${data}/${func}.json`);
+  const filePath = join(__dirname, `results/${user}/${func}.csv`);
 
   if (!existsSync(filePath)) {
     return res.status(404).json({ error: "File not found" });
@@ -67,12 +82,12 @@ app.post("/state", (req, res) => {
 
 // Method: trigger
 app.post("/trigger", async (req, res) => {
-  const { data } = req.body;
-  if (!data) {
-    return res.status(400).json({ error: "Missing data" });
+  const { user } = req.body;
+  if (!user) {
+    return res.status(400).json({ error: "Missing user" });
   }
 
-  const tweetsPath = join(__dirname, `${data}/tweets.json`);
+  const tweetsPath = join(__dirname, `tweets/${user}/tweets.json`);
 
   // Check if tweets.json exists and is recent (within last 1 hour)
   if (existsSync(tweetsPath)) {
@@ -84,7 +99,7 @@ app.post("/trigger", async (req, res) => {
     }
   }
 
-  const twitterUsername = data; // Assuming 'data' is the Twitter username
+  const twitterUsername = user; // Assuming 'user' is the Twitter username
 
   try {
     const response = await get(
