@@ -33,6 +33,10 @@ async function main() {
       process.env.TWITTER_USERNAME,
       process.env.TWITTER_PASSWORD,
       process.env.TWITTER_EMAIL,
+      process.env.TWITTER_2FA_SECRET,
+      process.env.TWITTER_COOKIES_AUTH_TOKEN,
+      process.env.TWITTER_COOKIES_CT0,
+      process.env.TWITTER_COOKIES_GUEST_ID
     );
     console.log("✅ Logged in");
     const tweet = await scraper.getTweet(tweetId);
