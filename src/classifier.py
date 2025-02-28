@@ -883,6 +883,6 @@ async def classify_tweets_async(input_file: str, output_file: str):
 
 
 if __name__ == "__main__":
-    input_file = f"../results/{user}/context.csv"
-    output_file = f"../results/{user}/classifier.csv"
+    input_file = f"results/{user}/context.csv"
+    output_file = f"results/{user}/classifier.csv"
     asyncio.run(classify_tweets_async(input_file, output_file))

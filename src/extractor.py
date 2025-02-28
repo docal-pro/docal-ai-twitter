@@ -40,7 +40,7 @@ logging.basicConfig(
     level=logging.INFO,  # Show all info messages
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("../logs/extractor.log"),  # Still log everything to file
+        logging.FileHandler("logs/extractor.log"),  # Still log everything to file
         logging.StreamHandler(
             sys.stdout
         ),  # But only show important messages in console
@@ -991,7 +991,7 @@ class TargetExtractor:
 
 async def check_files():
     print("\n🔎 Checking files and configuration...")
-    input_file = f"../results/{user}/classifier.csv"
+    input_file = f"results/{user}/classifier.csv"
     if not os.path.exists(input_file):
         print(f"❌ Input file not found: {input_file}")
         return False
@@ -1030,7 +1030,7 @@ async def check_files():
         predictions_df = predictions_df.sort_values("createdAt")
 
         # Save filtered predictions
-        cleaned_file = f"../results/{user}/cleaned.csv"
+        cleaned_file = f"results/{user}/cleaned.csv"
         print(f"🔎 Saving filtered predictions to: {cleaned_file}")
         predictions_df.to_csv(cleaned_file, index=False)
 
@@ -1064,8 +1064,8 @@ async def main():
     try:
         print("\n🔎 Initialising extractor...")
         extractor = TargetExtractor()
-        input_file = f"../results/{user}/classifier.csv"
-        output_file = f"../results/{user}/extractor.csv"
+        input_file = f"results/{user}/classifier.csv"
+        output_file = f"results/{user}/extractor.csv"
         print(f"\n🔎 Processing file: {input_file}")
         print(f"🔎 Output will be saved to: {output_file}")
         await extractor.process_file(input_file, output_file)

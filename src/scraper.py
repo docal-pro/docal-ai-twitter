@@ -14,7 +14,7 @@ async def get_tweet(tweet_id: str):
     try:
         process = await asyncio.create_subprocess_exec(
             "node",
-            "../agent/agent.js",
+            "agent/agent.js",
             tweet_id,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -96,7 +96,7 @@ def check_existing_tweet(tweet_id: str) -> tuple[bool, str, list]:
     Returns: (exists: bool, username: str if exists else None, existing_tweets: list)
     """
     # Check all subdirectories in tweets/
-    tweets_dir = Path("../tweets")
+    tweets_dir = Path("tweets")
     if not tweets_dir.exists():
         return False, None, []
     
@@ -146,7 +146,7 @@ async def main():
         sys.exit(1)
 
     # Create directory if it doesn't exist
-    output_dir = f"../tweets/{username}"
+    output_dir = f"tweets/{username}"
     os.makedirs(output_dir, exist_ok=True)
 
     output_file = f"{output_dir}/input.json"

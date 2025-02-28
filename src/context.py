@@ -508,10 +508,10 @@ class TweetContextBuilder:
 
 
 async def main():
-    input_file = f"../tweets/{user}/input.json"
-    output_file = f"../results/{user}/context.csv"
-    checkpoint_file = f"../results/{user}/temp/checkpoint.csv"
-    processed_ids_file = f"../results/{user}/temp/processed.json"
+    input_file = f"tweets/{user}/input.json"
+    output_file = f"results/{user}/context.csv"
+    checkpoint_file = f"results/{user}/temp/checkpoint.csv"
+    processed_ids_file = f"results/{user}/temp/processed.json"
     batch_size = 100  # Process tweets in batches
 
     # Create backup directory if it doesn't exist
