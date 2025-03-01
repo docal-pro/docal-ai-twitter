@@ -1,8 +1,8 @@
-# `OCSCO`: `On-Chain Social Credit Organiser`
+# `DOCAL AI`
 
 > This is a fork of original work done by [`David Lin`](https://github.com/davidlinjiahao) on [`frank-analyzer`](https://github.com/davidlinjiahao/frank_analyzer)
 
-A Python-based tool wrapped in Javascript that analyses tweets from any public `@` on X/Twitter using multiple Large Language Models (LLMs) and classifies them based on several abstract and user-provided metrics.
+A Python-based tool wrapped in Javascript that analyses tweets from any public `@user` on X/Twitter using multiple Large Language Models (LLMs) and classifies them based on several abstract and user-provided metrics.
 
 ## Features
 
@@ -78,50 +78,66 @@ npm run init
 npm run pip-install
 ```
 
-### 3. Start the proxy worker
+### 3. Start proxy worker
 
 ```bash
+# Shortcut to start the proxy worker
 npm run proxy-dev
 ```
 
-### 4. Start the server
+### 4. Start server
 
 ```bash
+# Shortcut to start the server
 npm run server-start
 ```
 
-### 5. Start the context creator for a specific `@user`
+### 5. Start context creator
 
 ```bash
-npm run context user
+# Shortcut to start the context creator for a specific `@user`
+npm run context $user
 ```
 
-### 6. Start the classifier for a specific `@user`
+### 6. Start classifier
 
 ```bash
-npm run classify user
+# Shortcut to start the classifier for a specific `@user`
+npm run classify $user
 ```
 
-### 7. Start the extractor for a specific `@user`
+### 7. Start extractor
 
 ```bash
-npm run extract user
+# Shortcut to start the extractor for a specific `@user`
+npm run extract $user
 ```
 
-### 8. Start the evaluator for a specific `@user`
+### 8. Start evaluator
 
 ```bash
-npm run evaluate user
+# Shortcut to start the evaluator for a specific `@user`
+npm run evaluate $user
 ```
 
-### 9. Start the scraper for a specific `tweetId`
+### 9. Start scraper or indexer
+
+#### 9.1. Start scraper for a tweet
 
 ```bash
-npm run scrape $tweetId false
+# Shortcut to start the scraper for a specific `tweetId` with `flag`
+npm run scrape $tweetId $flag
 ```
 
-### 10. Start the indexer for a specific `@user`
+#### 9.2. Start indexer for a user
 
 ```bash
-npm run index $user false
+# Shortcut to start the indexer for a specific `@user` with `flag`
+npm run index $user $flag
 ```
+
+| Option         | Description                     | `flag`  |
+| -------------- | ------------------------------- | ------- |
+| Forced cookies | Use cookies from `.env` file    | `true`  |
+| Cached cookies | Use previously cached cookies   | `false` |
+| Fresh login    | Login without using any cookies | `none`  |
