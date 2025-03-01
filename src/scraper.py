@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-async def get_tweet(tweet_id: str):
+async def get_tweet(tweet_id: str, flag: str = "none"):
     """Get tweet data using agent-twitter-client"""
     print(f"🔎 Searching for tweet {tweet_id}...")
     try:
@@ -17,6 +17,7 @@ async def get_tweet(tweet_id: str):
             "node",
             "agent/agent.js",
             tweet_id,
+            flag,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -124,11 +125,12 @@ def check_existing_tweet(tweet_id: str) -> tuple[bool, str, list]:
 
 
 async def main():
-    if len(sys.argv) != 2:
-        print("ℹ️  Usage: python tweet_scraper.py <tweet_id>")
+    if len(sys.argv) != 3:
+        print("ℹ️  Usage: python tweet_scraper.py <tweet_id> <flag>")
         sys.exit(1)
 
     tweet_id = sys.argv[1]
+    flag = sys.argv[2]
     
     # First check if tweet already exists
     exists, existing_username, existing_tweets = check_existing_tweet(tweet_id)
@@ -137,7 +139,7 @@ async def main():
         sys.exit(0)
     
     # If not found, proceed with fetching the tweet
-    tweet_data = await get_tweet(tweet_id)
+    tweet_data = await get_tweet(tweet_id, flag)
     
     if tweet_data.get("failed"):
         print("❌ Failed to fetch tweet")

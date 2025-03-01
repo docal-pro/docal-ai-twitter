@@ -13,7 +13,7 @@ load_dotenv()
 DATA_AGE_LIMIT = int(os.getenv("DATA_AGE_LIMIT", 24))
 
 
-async def get_tweets(username: str):
+async def get_tweets(username: str, flag: str = "none"):
     """Get multiple tweets from a username using agent-twitter-client"""
     print(f"🔎 Searching for tweets from @{username}...")
     try:
@@ -21,6 +21,7 @@ async def get_tweets(username: str):
             "node",
             "agent/indexer.js",
             username,
+            flag,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -96,18 +97,19 @@ def check_existing_tweets(username: str, age_limit_hours: int) -> bool:
 
 
 async def main():
-    if len(sys.argv) != 2:
-        print("ℹ️  Usage: python indexer.py <username>")
+    if len(sys.argv) != 3:
+        print("ℹ️  Usage: python indexer.py <username> <flag>")
         sys.exit(1)
 
     username = sys.argv[1]
-    
+    flag = sys.argv[2]
+
     # Check if tweets exist and are fresh
     if check_existing_tweets(username, DATA_AGE_LIMIT):
         sys.exit(0)
 
     # Fetch tweets
-    tweet_data = await get_tweets(username)
+    tweet_data = await get_tweets(username, flag)
     
     if not tweet_data:
         print(f"❌ No tweets found for @{username}")

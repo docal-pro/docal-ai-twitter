@@ -57,23 +57,39 @@ async function main() {
     if (!isLoggedIn) {
       console.log("ℹ️  Trying to log in with cookies...");
       // Check if cookies exist
+      let cookies = [];
       if (fs.existsSync(cookiesFile)) {
-        await scraper.setCookies(loadCookies(cookiesFile));
+        cookies = loadCookies(cookiesFile);
       } else {
         console.log("ℹ️  No cookies found, logging in...");
       }
-      // Check if forceLoginWithCookies is true
-      const forceLoginWithCookies = process.argv[3] === "true";
+      // Get forceLoginWithCookies from command line arguments
+      const forceLoginWithCookies = process.argv[3];
 
-      if (forceLoginWithCookies) {
+      if (forceLoginWithCookies === "true") {
+        // Load keys from cookies
+        let authToken, ct0, guestId;
+        if (cookies.length > 0) {
+          authToken = cookies.find((c) => c.name === "auth_token");
+          ct0 = cookies.find((c) => c.name === "ct0");
+          guestId = cookies.find((c) => c.name === "guest_id");
+        }
         await scraper.login(
           TWITTER_USERNAME,
           TWITTER_PASSWORD,
           TWITTER_EMAIL,
           TWITTER_2FA_SECRET,
-          TWITTER_COOKIES_AUTH_TOKEN,
-          TWITTER_COOKIES_CT0,
-          TWITTER_COOKIES_GUEST_ID
+          TWITTER_COOKIES_AUTH_TOKEN || authToken,
+          TWITTER_COOKIES_CT0 || ct0,
+          TWITTER_COOKIES_GUEST_ID || guestId
+        );
+      } else if (forceLoginWithCookies === "false") {
+        if (cookies.length > 0) await scraper.setCookies(cookies);
+        await scraper.login(
+          TWITTER_USERNAME,
+          TWITTER_PASSWORD,
+          TWITTER_EMAIL,
+          TWITTER_2FA_SECRET
         );
       } else {
         await scraper.login(
@@ -89,14 +105,21 @@ async function main() {
       });
       console.log("✅ Logged in");
     } else {
-      await scraper.setCookies(loadCookies(cookiesFile));
-      console.log("✅ Already logged in");
+      if (fs.existsSync(cookiesFile)) {
+        await scraper.setCookies(loadCookies(cookiesFile));
+        console.log("✅ Already logged in");
+      } else {
+        console.log("❌ Logged in but no cookies found");
+      }
     }
 
+    console.log(username, MAX_TWEETS_IN_BATCH);
     const tweets = scraper.getTweets(username, MAX_TWEETS_IN_BATCH);
+    console.log(tweets);
     console.log("✅ Tweets fetched for " + username);
     // Print the tweet data as JSON string, handling circular references
     console.log(JSON.stringify(tweets, getCircularReplacer()));
+    if (isLoggedIn) scraper.logout();
   } catch (error) {
     console.error(error);
     process.exit(1);
