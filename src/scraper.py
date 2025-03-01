@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+
 async def get_tweet(tweet_id: str):
     """Get tweet data using agent-twitter-client"""
     print(f"🔎 Searching for tweet {tweet_id}...")
@@ -90,6 +91,7 @@ async def get_tweet(tweet_id: str):
             "username": "unknown"
         }
 
+
 def check_existing_tweet(tweet_id: str) -> tuple[bool, str, list]:
     """
     Check if tweet already exists in any user's input.json file
@@ -119,6 +121,7 @@ def check_existing_tweet(tweet_id: str) -> tuple[bool, str, list]:
             continue
     
     return False, None, []
+
 
 async def main():
     if len(sys.argv) != 2:
@@ -163,6 +166,7 @@ async def main():
         json.dump(tweets_list, f, indent=2)
     
     print(f"✅ Tweet saved to {output_file}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

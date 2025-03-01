@@ -7,6 +7,7 @@ load_dotenv()
 
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 
+
 def test_perplexity():
     """Test Perplexity API with a simple request"""
     if not PERPLEXITY_API_KEY:
@@ -52,6 +53,7 @@ def test_perplexity():
     except Exception as e:
         print(f"Error testing Perplexity API: {str(e)}")
         return False
+
 
 if __name__ == "__main__":
     success = test_perplexity()

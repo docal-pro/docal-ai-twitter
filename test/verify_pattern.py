@@ -1,5 +1,6 @@
 import csv
 
+
 def find_affected_tweets():
     with open('results.csv', 'r') as f:
         reader = csv.reader(f)
@@ -35,6 +36,7 @@ def find_affected_tweets():
                         print(f"Expected: '{expected}'")
 
         print(f"\nTotal affected tweets found: {affected_count}")
+
 
 if __name__ == "__main__":
     find_affected_tweets() 

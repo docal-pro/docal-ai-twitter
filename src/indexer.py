@@ -4,165 +4,127 @@ import sys
 import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
 
-async def get_tweet(tweet_id: str):
-    """Get tweet data using agent-twitter-client"""
-    print(f"🔎 Searching for tweet {tweet_id}...")
+# Define how old the file should be before re-fetching (in hours)
+DATA_AGE_LIMIT = int(os.getenv("DATA_AGE_LIMIT", 24))
+
+
+async def get_tweets(username: str):
+    """Get multiple tweets from a username using agent-twitter-client"""
+    print(f"🔎 Searching for tweets from @{username}...")
     try:
         process = await asyncio.create_subprocess_exec(
             "node",
             "agent/indexer.js",
-            tweet_id,
+            username,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        print(f"ℹ️  Waiting for tweet {tweet_id}...")
+        print(f"ℹ️  Waiting for tweets from @{username}...")
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
 
         if stderr:
             stderr_text = stderr.decode()
             print(f"❌ Error: {stderr_text}")
-            error_message = "[This post is not accessible]"
-            if "Missing data" in stderr_text:
-                error_message = "[This post is restricted]"
-            elif "Not authorized" in stderr_text:
-                error_message = "[This post is from a suspended account]"
-            elif "deleted" in stderr_text.lower():
-                error_message = "[This post was deleted]"
-            
-            return {
-                "id": tweet_id,
-                "failed": True,
-                "text": error_message,
-                "username": "unknown"
-            }
+            return []
 
-        # Step 1: Decode the bytes to a string
+        # Decode stdout
         decoded_data = stdout.decode("utf-8")
 
-        # Step 2: Split logs and JSON
+        # Separate logs and JSON output
         lines = decoded_data.split("\n")
-        logs = []
-        json_lines = []
+        logs, json_lines = [], []
 
         for line in lines:
             stripped = line.strip()
-            if stripped.startswith("{"):
+            if stripped.startswith("["):  # JSON array of tweets
                 json_lines.append(stripped)
-            elif json_lines:  # If JSON started, assume multi-line JSON
+            elif json_lines:  # Handle multi-line JSON
                 json_lines.append(stripped)
             else:
                 logs.append(stripped)
 
-        # Step 3: Print logs
+        # Print logs
         for log in logs:
             print(log)
 
-        # Step 4: Parse and print JSON
-        json_string = "".join(json_lines) if json_lines else "{}"  # Ensure json_string is always defined
+        # Parse JSON
+        json_string = "".join(json_lines) if json_lines else "[]"
 
         try:
             tweet_data = json.loads(json_string)
-            # print(json.dumps(tweet_data, indent=2))  # Pretty-print JSON
         except json.JSONDecodeError as e:
-            print("\n❌ Error parsing JSON:", e)
-            tweet_data = None  # Ensure `tweet_data` is defined
+            print(f"\n❌ Error parsing JSON: {e}")
+            return []
 
         if not tweet_data:
-            return {
-                "id": tweet_id,
-                "failed": True,
-                "text": "[This post was not accessible]",
-                "username": "unknown"
-            }
+            print(f"❌ No tweets found for @{username}")
+            return []
         
         return tweet_data
 
     except Exception as e:
-        print(f"❌ Error fetching tweet: {e}")
-        return {
-            "id": tweet_id,
-            "failed": True,
-            "text": "[Error fetching tweet]",
-            "username": "unknown"
-        }
+        print(f"❌ Error fetching tweets: {e}")
+        return []
 
-def check_existing_tweet(tweet_id: str) -> tuple[bool, str, list]:
-    """
-    Check if tweet already exists in any user's input.json file
-    Returns: (exists: bool, username: str if exists else None, existing_tweets: list)
-    """
-    # Check all subdirectories in tweets/
+
+def check_existing_tweets(username: str, age_limit_hours: int) -> bool:
+    """Check if tweets exist and are recent enough"""
     tweets_dir = Path("tweets")
     if not tweets_dir.exists():
-        return False, None, []
-    
-    for user_dir in tweets_dir.iterdir():
-        if not user_dir.is_dir():
-            continue
-            
-        input_file = user_dir / "input.json"
-        if not input_file.exists():
-            continue
-            
-        try:
-            with open(input_file, 'r') as f:
-                tweets = json.load(f)
-                # Check if tweet_id exists in this file
-                for tweet in tweets:
-                    if tweet.get('id') == tweet_id:
-                        return True, user_dir.name, tweets
-        except json.JSONDecodeError:
-            continue
-    
-    return False, None, []
+        return False
+
+    user_dir = tweets_dir / username
+    tweet_file = user_dir / "tweets.json"
+
+    if tweet_file.exists():
+        # Check file modification time
+        file_mod_time = datetime.fromtimestamp(tweet_file.stat().st_mtime)
+        time_diff = datetime.now() - file_mod_time
+
+        if time_diff < timedelta(hours=age_limit_hours):
+            print(f"✅ Tweets for @{username} are recent (modified {time_diff.seconds // 3600} hours ago). Skipping fetch")
+            return True
+
+        print(f"⚠️  Tweets for @{username} are outdated (modified {time_diff.seconds // 3600} hours ago). Fetching new tweets...")
+
+    return False
+
 
 async def main():
     if len(sys.argv) != 2:
-        print("ℹ️  Usage: python tweet_scraper.py <tweet_id>")
+        print("ℹ️  Usage: python indexer.py <username>")
         sys.exit(1)
 
-    tweet_id = sys.argv[1]
+    username = sys.argv[1]
     
-    # First check if tweet already exists
-    exists, existing_username, existing_tweets = check_existing_tweet(tweet_id)
-    if exists:
-        print(f"✅ Tweet {tweet_id} already exists in tweets/{existing_username}/input.json")
+    # Check if tweets exist and are fresh
+    if check_existing_tweets(username, DATA_AGE_LIMIT):
         sys.exit(0)
+
+    # Fetch tweets
+    tweet_data = await get_tweets(username)
     
-    # If not found, proceed with fetching the tweet
-    tweet_data = await get_tweet(tweet_id)
-    
-    if tweet_data.get("failed"):
-        print("❌ Failed to fetch tweet")
-        sys.exit(1)
-        
-    username = tweet_data.get("username")
-    if not username:
-        print("❌ Could not extract username from tweet")
+    if not tweet_data:
+        print(f"❌ No tweets found for @{username}")
         sys.exit(1)
 
-    # Create directory if it doesn't exist
+    # Create directory
     output_dir = f"tweets/{username}"
     os.makedirs(output_dir, exist_ok=True)
 
-    output_file = f"{output_dir}/input.json"
-    
-    # Save to file
-    tweets_list = []
-    if os.path.exists(output_file):
-        with open(output_file, 'r') as f:
-            tweets_list = json.load(f)
-    
-    tweets_list.append(tweet_data)
-    
+    output_file = f"{output_dir}/tweets.json"
+
+    # Save tweets to file
     with open(output_file, 'w') as f:
-        json.dump(tweets_list, f, indent=2)
-    
-    print(f"✅ Tweet saved to {output_file}")
+        json.dump(tweet_data, f, indent=2)
+
+    print(f"✅ Tweets saved to {output_file}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

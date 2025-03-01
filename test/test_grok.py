@@ -7,6 +7,7 @@ import json
 # Load environment variables
 load_dotenv()
 
+
 async def test_grok():
     """Test Grok API with a simple prediction"""
     headers = {
@@ -78,12 +79,14 @@ Return in JSON format:
         print(f"Error connecting to Grok API: {str(e)}")
         return False
 
+
 async def main():
     success = await test_grok()
     if success:
         print("\nGrok API test successful! ✓")
     else:
         print("\nGrok API test failed! ✗")
+
 
 if __name__ == "__main__":
     asyncio.run(main()) 

@@ -7,14 +7,14 @@ import os
 
 def fix_error_contexts(user, function):
     # Load affected tweet IDs
-    print("Loading ../tweets/{user}/temp/affected_tweet_ids.txt...")
-    with open("../tweets/{user}/temp/affected_tweet_ids.txt", "r") as f:
+    print(f"Loading tweets/{user}/checkpoints/affected_tweet_ids.txt...")
+    with open(f"tweets/{user}/checkpoints/affected_tweet_ids.txt", "r") as f:
         affected_ids = set(line.strip() for line in f)
     print(f"Loaded {len(affected_ids)} affected tweet IDs")
 
     # Load tweet data from ../tweets/{user}/input.json.json for original text
-    print("\nLoading ../tweets/{user}/input.json.json...")
-    with open("../tweets/{user}/input.json.json", "r") as f:
+    print(f"\nLoading tweets/{user}/input.json.json...")
+    with open(f"tweets/{user}/input.json.json", "r") as f:
         tweets = json.loads(f.read(), parse_int=str)
 
     # Create mapping of ID to tweet data
@@ -23,18 +23,18 @@ def fix_error_contexts(user, function):
 
     # Create backup of original results/{user}/{function}.csv
     backup_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_file = f"../backups/{user}/{function}.csv.{backup_time}.bak"
-    os.makedirs("../backups", exist_ok=True)
-    shutil.copy2("../results/{user}/{function}.csv", backup_file)
+    backup_file = f"results/{user}/backups/{function}.csv.{backup_time}.bak"
+    os.makedirs(f"results/{user}/backups", exist_ok=True)
+    shutil.copy2(f"results/{user}/{function}.csv", backup_file)
     print(f"\nCreated backup at {backup_file}")
 
     # Read existing {user}/{function}.csv and create new version with fixed error messages
-    print("Processing results/{user}/{function}.csv...")
+    print(f"Processing results/{user}/{function}.csv...")
     rows_processed = 0
     errors_fixed = 0
 
-    with open("../results/{user}/{function}.csv", "r") as f_in, open(
-        "../results/{user}/{function}_with_fixed_errors.csv", "w", newline=""
+    with open(f"results/{user}/{function}.csv", "r") as f_in, open(
+        f"results/{user}/{function}_with_fixed_errors.csv", "w", newline=""
     ) as f_out:
         reader = csv.reader(f_in)
         writer = csv.writer(f_out)
@@ -89,10 +89,10 @@ def fix_error_contexts(user, function):
 
     # Replace original file with new version
     os.replace(
-        "../results/{user}/{function}_with_fixed_errors.csv",
-        "../results/{user}/{function}.csv",
+        f"results/{user}/{function}_with_fixed_errors.csv",
+        f"results/{user}/{function}.csv",
     )
-    print("Updated results/{user}/{function}.csv with fixed error messages")
+    print(f"Updated results/{user}/{function}.csv with fixed error messages")
 
 
 if __name__ == "__main__":

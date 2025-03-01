@@ -9,11 +9,11 @@ def analyse_tweet_contexts(user, function):
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # Load tweet data from tweets/{user}/input.json
-    with open(os.path.join(parent_dir, "../tweets/{user}/input.json"), "r") as f:
+    with open(os.path.join(parent_dir, f"tweets/{user}/input.json"), "r") as f:
         all_tweets = json.load(f)
 
     # Load results data
-    with open(os.path.join(parent_dir, "../results/{user}/{function}.csv"), "r") as f:
+    with open(os.path.join(parent_dir, f"results/{user}/{function}.csv"), "r") as f:
         reader = csv.reader(f)
         header = next(reader)
         results = list(reader)
