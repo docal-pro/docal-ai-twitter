@@ -78,12 +78,6 @@ npm run init
 npm run pip-install
 ```
 
-#### 2.1. Install scraper
-
-```bash
-npm run install-scraper
-```
-
 ### 3. Start the proxy worker
 
 ```bash
@@ -118,4 +112,16 @@ npm run extract user
 
 ```bash
 npm run evaluate user
+```
+
+### 9. Start the scraper for a specific `tweetId`
+
+```bash
+npm run scrape $tweetId false
+```
+
+### 10. Start the indexer for a specific `@user`
+
+```bash
+npm run index $user false
 ```

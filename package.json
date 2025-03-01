@@ -25,7 +25,6 @@
     "classify": "python3 src/classifier.py",
     "extract": "python3 src/extractor.py",
     "evaluate": "python3 src/evaluator.py",
-    "install-scraper": "git clone https://github.com/bisguzar/twitter-scraper.git && cd twitter-scraper && sudo python3 setup.py install && cd ..",
     "scrape": "python3 src/scraper.py",
     "index": "python3 src/indexer.py"
   },
