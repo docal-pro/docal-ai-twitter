@@ -79,8 +79,8 @@ def check_existing_tweets(username: str, age_limit_hours: int) -> bool:
     if not tweets_dir.exists():
         return False
 
-    user_dir = tweets_dir / username
-    tweet_file = user_dir / "tweets.json"
+    user_dir = f"tweets/{username}"
+    tweet_file = f"{user_dir}/tweets.json"
 
     if tweet_file.exists():
         # Check file modification time
