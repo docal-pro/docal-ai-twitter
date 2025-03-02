@@ -114,7 +114,6 @@ async function main() {
     }
 
     const tweets = scraper.getTweets(username, MAX_TWEETS_IN_BATCH);
-    console.log(JSON.stringify(tweets));
     console.log("✅ Tweets fetched for " + username);
     // Print the tweet data as JSON string, handling circular references
     console.log(JSON.stringify(tweets, getCircularReplacer()));
