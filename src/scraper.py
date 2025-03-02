@@ -10,6 +10,36 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def add_to_database(tweet_data: dict):
+    """Add tweet data to the database"""
+    try:
+        # Get DB config from environment
+        db_host = os.getenv('DB_HOST')
+        db_name = os.getenv('DB_NAME')
+        db_user = os.getenv('DB_USER')
+        db_pass = os.getenv('DB_PASSWORD')  
+
+        # Connect to database
+        connection = psycopg2.connect(
+            host=db_host,
+            database=db_name,
+            user=db_user,
+            password=db_pass
+        )
+        cursor = connection.cursor()
+
+        # Insert tweet data into database
+        cursor.execute(
+            "INSERT INTO tweets (tweet_id, username, tweet) VALUES (%s, %s, %s)",
+            (tweet_data['id'], tweet_data['username'], tweet_data['text'])
+        )
+        connection.commit()
+        cursor.close()
+        connection.close()
+    except Exception as e:
+        print(f"❌ Error adding tweet to database: {e}")
+
+
 async def get_tweets(tweet_ids: list[str], flag: str = "none"):
     """Get tweet data using agent-twitter-client"""
     print(f"🔎 Searching for tweets...")
@@ -75,6 +105,8 @@ def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
     Check if tweets already exist in the database
     Returns: (exists: bool, username: str if exists else None, existing_tweets: list)
     """
+    print(f"🔎 Checking for tweets...")
+    
     # Query the database for the tweet IDs
     try:
         # Get DB config from environment
@@ -95,21 +127,23 @@ def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
         # Query for tweets
         placeholders = ','.join(['%s'] * len(tweet_ids))
         cursor.execute(
-            f"SELECT username, tweets FROM tweets WHERE tweet_id IN ({placeholders})",
+            f"SELECT tweet_id, username, tweet FROM tweets WHERE tweet_id IN ({placeholders})",
             tuple(tweet_ids)
         )
-        result = cursor.fetchone()
-        
-        if result:
-            usernames, tweets = result
-            return True, usernames, tweets
+        results = cursor.fetchall()
+
+        if results:
+            matched_tweet_ids = [row[0] for row in results]
+            matched_usernames = [row[1] for row in results]
+            matched_tweets = [row[2] for row in results]
+            return True, matched_tweet_ids, matched_usernames, matched_tweets
             
         cursor.close()
         connection.close()
     except Exception as e:
         print(f"❌ Error querying database: {e}")
         
-    return False, None, []
+    return False, [], [], []
 
 
 async def main():
@@ -122,11 +156,15 @@ async def main():
     flag = sys.argv[2]
     
     # First check if tweets already exist
-    status, existing_usernames, existing_tweets = check_existing_tweets(tweet_ids)
+    status, existing_tweet_ids, existing_usernames, existing_tweets = check_existing_tweets(tweet_ids)
 
     # Filter out tweets that don't exist
-    tweet_ids = [tweet_id for tweet_id in tweet_ids if tweet_id not in existing_tweets]
-    
+    tweet_ids = [tweet_id for tweet_id in tweet_ids if tweet_id not in existing_tweet_ids]
+
+    if not tweet_ids:
+        print(f"✅ Tweets already exist")
+        sys.exit(1)
+
     # If not found, proceed with fetching the tweet
     tweets_data = await get_tweets(tweet_ids, flag)
     
@@ -151,6 +189,9 @@ async def main():
         
         with open(output_file, 'w') as f:
             json.dump(tweet_list, f, indent=2)
+
+        # Add to database
+        add_to_database(tweet_data)
         
         print(f"✅ Tweet saved to {output_file}")
 

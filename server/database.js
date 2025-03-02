@@ -81,7 +81,7 @@ export async function createDatabase() {
       CREATE TABLE IF NOT EXISTS tweets (
         tweet_id VARCHAR(50) PRIMARY KEY,
         username VARCHAR(100) NOT NULL,
-        tweets TEXT NOT NULL
+        tweet TEXT NOT NULL
       );
     `;
     await dbClient.query(createTableQuery);
