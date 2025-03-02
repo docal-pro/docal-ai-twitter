@@ -5,8 +5,6 @@ import { Cookie } from "tough-cookie";
 
 dotenv.config();
 
-const MAX_TWEETS_IN_BATCH = process.env.MAX_TWEETS_IN_BATCH || 10;
-
 const TWITTER_USERNAME = process.env.TWITTER_USERNAME;
 const TWITTER_PASSWORD = process.env.TWITTER_PASSWORD;
 const TWITTER_EMAIL = process.env.TWITTER_EMAIL;
@@ -14,6 +12,7 @@ const TWITTER_2FA_SECRET = process.env.TWITTER_2FA_SECRET;
 let TWITTER_COOKIES_AUTH_TOKEN = process.env.TWITTER_COOKIES_AUTH_TOKEN;
 let TWITTER_COOKIES_CT0 = process.env.TWITTER_COOKIES_CT0;
 let TWITTER_COOKIES_GUEST_ID = process.env.TWITTER_COOKIES_GUEST_ID;
+const MAX_TWEETS_IN_BATCH = process.env.MAX_TWEETS_IN_BATCH || 10;
 
 const cookiesFile = "logs/cookies.json";
 
