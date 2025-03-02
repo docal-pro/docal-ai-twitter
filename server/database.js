@@ -8,7 +8,7 @@ dotenv.config();
  * Creates a new PostgreSQL client without connecting to a specific database.
  * Used for checking and creating databases.
  */
-function getAdminClient() {
+export function getAdminClient() {
   return new Client({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -77,15 +77,28 @@ export async function createDatabase() {
     await dbClient.connect();
 
     // Create the 'tweets' table
-    const createTableQuery = `
+    const createTweetsTableQuery = `
       CREATE TABLE IF NOT EXISTS tweets (
         tweet_id VARCHAR(50) PRIMARY KEY,
         username VARCHAR(100) NOT NULL,
         tweet TEXT NOT NULL
       );
     `;
-    await dbClient.query(createTableQuery);
-    console.log(`✅ Table created successfully in "${dbName}"`);
+    await dbClient.query(createTweetsTableQuery);
+    console.log(`✅ Table "tweets" created successfully in "${dbName}"`);
+
+    // Create the 'score' table
+    const createScoreTableQuery = `
+      CREATE TABLE IF NOT EXISTS score (
+        username VARCHAR(100) NOT NULL,
+        tweet_count INT NOT NULL,
+        score TINYINT CHECK (score BETWEEN 0 AND 100),
+        trust TINYINT CHECK (trust BETWEEN 0 AND 5),
+        investigate TINYINT CHECK (investigate BETWEEN 0 AND 4)
+      );
+    `;
+    await dbClient.query(createScoreTableQuery);
+    console.log(`✅ Table "score" created successfully in "${dbName}"`);
 
     await dbClient.end();
     return true;

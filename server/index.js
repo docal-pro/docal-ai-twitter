@@ -10,7 +10,7 @@ import { exec } from "child_process";
 import { join } from "path";
 import axios from "axios";
 import dotenv from "dotenv";
-import { checkDatabase, createDatabase } from "./database.js";
+import { checkDatabase, createDatabase, getAdminClient } from "./database.js";
 
 dotenv.config();
 const { get } = axios;
@@ -33,7 +33,21 @@ checkDatabase().then((exists) => {
   }
 });
 
-// Method: process
+// Method: Get all records from the 'score' table
+app.get("/db", async (req, res) => {
+  try {
+    const client = getAdminClient();
+    await client.connect();
+    const result = await client.query("SELECT * FROM score");
+    await client.end();
+    res.json({ db: result.rows });
+  } catch (error) {
+    console.error('❌ Error fetching data from "score" table:', error);
+    res.status(500).json({ error: "An error occurred while fetching data" });
+  }
+});
+
+// Method: Process an investigate request
 app.post("/process", (req, res) => {
   const { function: func, data } = req.body;
   if (!func || !data) {
@@ -75,7 +89,7 @@ app.post("/process", (req, res) => {
   });
 });
 
-// Method: state
+// Method: Get the state of an investigation
 app.post("/state", (req, res) => {
   const { function: func, user } = req.body;
   if (!func || !user) {
@@ -92,7 +106,7 @@ app.post("/state", (req, res) => {
   res.json({ state: JSON.parse(fileContent) });
 });
 
-// Method: trigger
+// Method: Trigger data indexing
 app.post("/trigger", async (req, res) => {
   const { user } = req.body;
   if (!user) {
@@ -130,4 +144,4 @@ app.post("/trigger", async (req, res) => {
   }
 });
 
-app.listen(3030, () => console.log("Server running on port 3030"));
+app.listen(3030, () => console.log("✅ Server running on port 3030"));
