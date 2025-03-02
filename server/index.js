@@ -114,6 +114,7 @@ app.post("/state", (req, res) => {
 
 // Method: Trigger data indexing
 app.post("/trigger", async (req, res) => {
+  return res.status(501).json({ error: "Method currently unavailable" });
   const { user } = req.body;
   if (!user) {
     return res.status(400).json({ error: "Missing user" });
