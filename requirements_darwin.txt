@@ -10,3 +10,4 @@ asyncio
 pycoingecko
 Pillow
 pyppeteer
+psycopg2-binary

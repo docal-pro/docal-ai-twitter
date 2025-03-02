@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import asyncio
+import psycopg2
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -9,166 +10,151 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-async def get_tweet(tweet_id: str, flag: str = "none"):
+async def get_tweets(tweet_ids: list[str], flag: str = "none"):
     """Get tweet data using agent-twitter-client"""
-    print(f"🔎 Searching for tweet {tweet_id}...")
+    print(f"🔎 Searching for tweets...")
     try:
         process = await asyncio.create_subprocess_exec(
             "node",
-            "agent/agent.js",
-            tweet_id,
+            "agent/scraper.js",
+            ",".join(tweet_ids),
             flag,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        print(f"ℹ️  Waiting for tweet {tweet_id}...")
+        print(f"ℹ️  Waiting for tweets...")
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
 
         if stderr:
             stderr_text = stderr.decode()
             print(f"❌ Error: {stderr_text}")
-            error_message = "[This post is not accessible]"
-            if "Missing data" in stderr_text:
-                error_message = "[This post is restricted]"
-            elif "Not authorized" in stderr_text:
-                error_message = "[This post is from a suspended account]"
-            elif "deleted" in stderr_text.lower():
-                error_message = "[This post was deleted]"
-            
-            return {
-                "id": tweet_id,
-                "failed": True,
-                "text": error_message,
-                "username": "unknown"
-            }
+            return []
 
-        # Step 1: Decode the bytes to a string
+        # Decode stdout
         decoded_data = stdout.decode("utf-8")
 
-        # Step 2: Split logs and JSON
+        # Separate logs and JSON output
         lines = decoded_data.split("\n")
-        logs = []
-        json_lines = []
+        logs, json_lines = [], []
 
         for line in lines:
             stripped = line.strip()
-            if stripped.startswith("{"):
+            if stripped.startswith("["):  # JSON array of tweets
                 json_lines.append(stripped)
-            elif json_lines:  # If JSON started, assume multi-line JSON
+            elif json_lines:  # Handle multi-line JSON
                 json_lines.append(stripped)
             else:
                 logs.append(stripped)
 
-        # Step 3: Print logs
+        # Print logs
         for log in logs:
             print(log)
 
-        # Step 4: Parse and print JSON
-        json_string = "".join(json_lines) if json_lines else "{}"  # Ensure json_string is always defined
+        # Parse JSON
+        json_string = "".join(json_lines) if json_lines else "[]"
 
         try:
-            tweet_data = json.loads(json_string)
-            # print(json.dumps(tweet_data, indent=2))  # Pretty-print JSON
+            tweets_data = json.loads(json_string)
         except json.JSONDecodeError as e:
-            print("\n❌ Error parsing JSON:", e)
-            tweet_data = None  # Ensure `tweet_data` is defined
+            print(f"\n❌ Error parsing JSON: {e}")
+            return []
 
-        if not tweet_data:
-            return {
-                "id": tweet_id,
-                "failed": True,
-                "text": "[This post was not accessible]",
-                "username": "unknown"
-            }
+        if not tweets_data:
+            print(f"❌ No tweets found")
+            return []
         
-        return tweet_data
+        return tweets_data
 
     except Exception as e:
-        print(f"❌ Error fetching tweet: {e}")
-        return {
-            "id": tweet_id,
-            "failed": True,
-            "text": "[Error fetching tweet]",
-            "username": "unknown"
-        }
+        print(f"❌ Error fetching tweets: {e}")
+        return []
+    
 
-
-def check_existing_tweet(tweet_id: str) -> tuple[bool, str, list]:
+def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
     """
-    Check if tweet already exists in any user's input.json file
+    Check if tweets already exist in the database
     Returns: (exists: bool, username: str if exists else None, existing_tweets: list)
     """
-    # Check all subdirectories in tweets/
-    tweets_dir = Path("tweets")
-    if not tweets_dir.exists():
-        return False, None, []
-    
-    for user_dir in tweets_dir.iterdir():
-        if not user_dir.is_dir():
-            continue
+    # Query the database for the tweet IDs
+    try:
+        # Get DB config from environment
+        db_host = os.getenv('DB_HOST')
+        db_name = os.getenv('DB_NAME')
+        db_user = os.getenv('DB_USER')
+        db_pass = os.getenv('DB_PASSWORD')
+        
+        # Connect to database
+        connection = psycopg2.connect(
+            host=db_host,
+            database=db_name,
+            user=db_user,
+            password=db_pass
+        )
+        cursor = connection.cursor()
+        
+        # Query for tweets
+        placeholders = ','.join(['%s'] * len(tweet_ids))
+        cursor.execute(
+            f"SELECT username, tweets FROM tweets WHERE tweet_id IN ({placeholders})",
+            tuple(tweet_ids)
+        )
+        result = cursor.fetchone()
+        
+        if result:
+            usernames, tweets = result
+            return True, usernames, tweets
             
-        input_file = user_dir / "input.json"
-        if not input_file.exists():
-            continue
-            
-        try:
-            with open(input_file, 'r') as f:
-                tweets = json.load(f)
-                # Check if tweet_id exists in this file
-                for tweet in tweets:
-                    if tweet.get('id') == tweet_id:
-                        return True, user_dir.name, tweets
-        except json.JSONDecodeError:
-            continue
-    
+        cursor.close()
+        connection.close()
+    except Exception as e:
+        print(f"❌ Error querying database: {e}")
+        
     return False, None, []
 
 
 async def main():
     if len(sys.argv) != 3:
-        print("ℹ️  Usage: python tweet_scraper.py <tweet_id> <flag>")
+        print("ℹ️  Usage: python tweet_scraper.py <tweet_ids> <flag>")
         sys.exit(1)
 
-    tweet_id = sys.argv[1]
+    # Parse comma-separated tweet IDs
+    tweet_ids = sys.argv[1].split(',')
     flag = sys.argv[2]
     
-    # First check if tweet already exists
-    exists, existing_username, existing_tweets = check_existing_tweet(tweet_id)
-    if exists:
-        print(f"✅ Tweet {tweet_id} already exists in tweets/{existing_username}/input.json")
-        sys.exit(0)
+    # First check if tweets already exist
+    status, existing_usernames, existing_tweets = check_existing_tweets(tweet_ids)
+
+    # Filter out tweets that don't exist
+    tweet_ids = [tweet_id for tweet_id in tweet_ids if tweet_id not in existing_tweets]
     
     # If not found, proceed with fetching the tweet
-    tweet_data = await get_tweet(tweet_id, flag)
+    tweets_data = await get_tweets(tweet_ids, flag)
     
-    if tweet_data.get("failed"):
-        print("❌ Failed to fetch tweet")
+    if not tweets_data:
+        print(f"❌ No tweets found")
         sys.exit(1)
+    
+    for tweet_data in tweets_data:
+        # Create directory if it doesn't exist
+        output_dir = f"tweets/{tweet_data['username']}"
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_file = f"{output_dir}/input.json"
         
-    username = tweet_data.get("username")
-    if not username:
-        print("❌ Could not extract username from tweet")
-        sys.exit(1)
-
-    # Create directory if it doesn't exist
-    output_dir = f"tweets/{username}"
-    os.makedirs(output_dir, exist_ok=True)
-
-    output_file = f"{output_dir}/input.json"
-    
-    # Save to file
-    tweets_list = []
-    if os.path.exists(output_file):
-        with open(output_file, 'r') as f:
-            tweets_list = json.load(f)
-    
-    tweets_list.append(tweet_data)
-    
-    with open(output_file, 'w') as f:
-        json.dump(tweets_list, f, indent=2)
-    
-    print(f"✅ Tweet saved to {output_file}")
+        # Save to file
+        tweet_list = []
+        if os.path.exists(output_file):
+            with open(output_file, 'r') as f:
+                tweet_list = json.load(f)
+        
+        tweet_list.append(tweet_data)
+        
+        with open(output_file, 'w') as f:
+            json.dump(tweet_list, f, indent=2)
+        
+        print(f"✅ Tweet saved to {output_file}")
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+    print(f"✅ Finished processing tweets")

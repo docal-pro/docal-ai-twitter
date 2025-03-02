@@ -57,16 +57,16 @@ async def get_tweets(username: str, flag: str = "none"):
         json_string = "".join(json_lines) if json_lines else "[]"
 
         try:
-            tweet_data = json.loads(json_string)
+            tweets_data = json.loads(json_string)
         except json.JSONDecodeError as e:
             print(f"\n❌ Error parsing JSON: {e}")
             return []
 
-        if not tweet_data:
+        if not tweets_data:
             print(f"❌ No tweets found for @{username}")
             return []
         
-        return tweet_data
+        return tweets_data
 
     except Exception as e:
         print(f"❌ Error fetching tweets: {e}")
@@ -109,9 +109,9 @@ async def main():
         sys.exit(0)
 
     # Fetch tweets
-    tweet_data = await get_tweets(username, flag)
+    tweets_data = await get_tweets(username, flag)
     
-    if not tweet_data:
+    if not tweets_data:
         print(f"❌ No tweets found for @{username}")
         sys.exit(1)
 
@@ -123,7 +123,7 @@ async def main():
 
     # Save tweets to file
     with open(output_file, 'w') as f:
-        json.dump(tweet_data, f, indent=2)
+        json.dump(tweets_data, f, indent=2)
 
     print(f"✅ Tweets saved to {output_file}")
 

@@ -40,10 +40,10 @@ const getCircularReplacer = () => {
 
 async function main() {
   console.log("✅ Scraper environment variables loaded");
-  const tweetId = process.argv[2];
+  const tweetIds = process.argv[2].split(",");
   console.log("ℹ️  Starting agent...");
-  if (!tweetId) {
-    console.error("🔎 Please provide a tweet ID as an argument");
+  if (!tweetIds) {
+    console.error("❌ Please provide list of tweet IDs as an argument");
     process.exit(1);
   }
 
@@ -111,10 +111,15 @@ async function main() {
       }
     }
 
-    const tweet = await scraper.getTweet(tweetId);
-    console.log("✅ Tweet fetched");
+    const tweets = [];
+    for (const tweetId of tweetIds) {
+      const tweet = await scraper.getTweet(tweetId);
+      tweets.push(tweet);
+    }
+    console.log("✅ Tweets fetched");
+
     // Print the tweet data as JSON string, handling circular references
-    console.log(JSON.stringify(tweet, getCircularReplacer()));
+    console.log(JSON.stringify(tweets, getCircularReplacer()));
     if (isLoggedIn) scraper.logout();
   } catch (error) {
     console.error(error);

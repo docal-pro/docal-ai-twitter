@@ -18,6 +18,7 @@ app.use(json());
 
 // Twitter/X API Bearer Token
 const TWITTER_BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
+const DATA_AGE_LIMIT = process.env.DATA_AGE_LIMIT || 24;
 
 // Utility function to check if a file exists and is not empty
 const fileExistsAndNotEmpty = (filePath) => {
@@ -32,7 +33,7 @@ app.post("/process", (req, res) => {
   }
 
   let filePath;
-  let tweetId;
+  let tweetIds;
   let user;
   if (func !== "scraper" && func !== "indexer") {
     filePath = join(__dirname, `results/${user}/${func}.csv`);
@@ -42,7 +43,7 @@ app.post("/process", (req, res) => {
     user = data;
   } else if (func === "scraper") {
     filePath = join(__dirname, `tweets/${user}/input.json`);
-    tweetId = data;
+    tweetIds = data;
   }
 
   if (!fileExistsAndNotEmpty(filePath)) {
@@ -51,10 +52,13 @@ app.post("/process", (req, res) => {
     } catch (err) {}
   }
 
+  let flag = "false";
   const command =
     func !== "scraper"
-      ? `python3 ${func}.py ${user}`
-      : `python3 ${func}.py ${tweetId}`;
+      ? func !== "indexer"
+        ? `python3 ${func}.py ${user}` // Flag not needed
+        : `python3 ${func}.py ${user} ${flag}` // Indexer needs flag
+      : `python3 ${func}.py ${tweetIds} ${flag}`; // Scraper needs flag
   exec(command, (error, stdout, stderr) => {
     if (error) {
       return res.status(500).json({ error: stderr || error.message });
@@ -89,12 +93,12 @@ app.post("/trigger", async (req, res) => {
 
   const tweetsPath = join(__dirname, `tweets/${user}/tweets.json`);
 
-  // Check if tweets.json exists and is recent (within last 1 hour)
+  // Check if tweets.json exists and is recent (within last N hours)
   if (existsSync(tweetsPath)) {
     const lastModified = statSync(tweetsPath).mtime;
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const dataAgeLimitAgo = Date.now() - DATA_AGE_LIMIT * 60 * 60 * 1000;
 
-    if (lastModified.getTime() > oneHourAgo) {
+    if (lastModified.getTime() > dataAgeLimitAgo) {
       return res.json({ success: true, message: "Tweets already up to date" });
     }
   }

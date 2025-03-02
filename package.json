@@ -17,9 +17,9 @@
   "scripts": {
     "init": "[ \"$(uname)\" = \"Linux\" ] && python3 -m venv venv && source venv/bin/activate",
     "pip-install": "sh -c \"if [[ $(uname) == 'Darwin' ]]; then pip install -r requirements_darwin.txt; else pip install -r requirements_linux.txt; fi\"",
-    "proxy-dev": "wrangler dev",
-    "proxy-deploy": "wrangler deploy",
+    "proxy-start": "wrangler dev",
     "proxy-build": "wrangler build",
+    "proxy-deploy": "wrangler deploy",
     "server-start": "node server/server.js",
     "context": "python3 src/context.py",
     "classify": "python3 src/classifier.py",
