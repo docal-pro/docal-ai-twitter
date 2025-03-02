@@ -1,7 +1,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "docal-ai-proxy",
-	"main": "proxy/proxy.js",
+	"main": "proxy/index.js",
 	"dev": {
 		"port": 8080
 	},

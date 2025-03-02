@@ -11,6 +11,7 @@
     "express": "^4.21.2",
     "fs": "^0.0.1-security",
     "path": "^0.12.7",
+    "pg": "^8.13.3",
     "tough-cookie": "^5.1.2"
   },
   "type": "module",
@@ -20,7 +21,7 @@
     "proxy-start": "wrangler dev",
     "proxy-build": "wrangler build",
     "proxy-deploy": "wrangler deploy",
-    "server-start": "node server/server.js",
+    "server-start": "node server/index.js",
     "context": "python3 src/context.py",
     "classify": "python3 src/classifier.py",
     "extract": "python3 src/extractor.py",

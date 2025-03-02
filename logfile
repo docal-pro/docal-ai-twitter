@@ -1,0 +1,49 @@
+2025-03-02 15:15:52.791 IST [24854] LOG:  starting PostgreSQL 14.17 (Homebrew) on aarch64-apple-darwin24.2.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit
+2025-03-02 15:15:52.792 IST [24854] LOG:  could not bind IPv6 address "::1": Address already in use
+2025-03-02 15:15:52.792 IST [24854] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2025-03-02 15:15:52.792 IST [24854] LOG:  could not bind IPv4 address "127.0.0.1": Address already in use
+2025-03-02 15:15:52.792 IST [24854] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2025-03-02 15:15:52.792 IST [24854] WARNING:  could not create listen socket for "localhost"
+2025-03-02 15:15:52.792 IST [24854] FATAL:  could not create any TCP/IP sockets
+2025-03-02 15:15:52.792 IST [24854] LOG:  database system is shut down
+2025-03-02 15:16:20.090 IST [25337] LOG:  starting PostgreSQL 14.17 (Homebrew) on aarch64-apple-darwin24.2.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit
+2025-03-02 15:16:20.091 IST [25337] LOG:  listening on IPv6 address "::1", port 5432
+2025-03-02 15:16:20.091 IST [25337] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-03-02 15:16:20.092 IST [25337] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2025-03-02 15:16:20.094 IST [25338] LOG:  database system was shut down at 2025-03-02 15:15:45 IST
+2025-03-02 15:16:20.096 IST [25337] LOG:  database system is ready to accept connections
+2025-03-02 15:17:02.795 IST [25356] FATAL:  role "postgres" does not exist
+2025-03-02 15:18:26.287 IST [25391] LOG:  starting PostgreSQL 14.17 (Homebrew) on aarch64-apple-darwin24.2.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit
+2025-03-02 15:18:26.289 IST [25391] LOG:  could not bind IPv6 address "::1": Address already in use
+2025-03-02 15:18:26.289 IST [25391] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2025-03-02 15:18:26.289 IST [25391] LOG:  could not bind IPv4 address "127.0.0.1": Address already in use
+2025-03-02 15:18:26.289 IST [25391] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2025-03-02 15:18:26.289 IST [25391] WARNING:  could not create listen socket for "localhost"
+2025-03-02 15:18:26.289 IST [25391] FATAL:  could not create any TCP/IP sockets
+2025-03-02 15:18:26.290 IST [25391] LOG:  database system is shut down
+2025-03-02 15:18:36.232 IST [25337] LOG:  received fast shutdown request
+2025-03-02 15:18:36.232 IST [25337] LOG:  aborting any active transactions
+2025-03-02 15:18:36.234 IST [25337] LOG:  background worker "logical replication launcher" (PID 25344) exited with exit code 1
+2025-03-02 15:18:36.235 IST [25339] LOG:  shutting down
+2025-03-02 15:18:36.243 IST [25337] LOG:  database system is shut down
+2025-03-02 15:19:15.044 IST [25401] LOG:  starting PostgreSQL 14.17 (Homebrew) on aarch64-apple-darwin24.2.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit
+2025-03-02 15:19:15.045 IST [25401] LOG:  listening on IPv6 address "::1", port 5432
+2025-03-02 15:19:15.045 IST [25401] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-03-02 15:19:15.045 IST [25401] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2025-03-02 15:19:15.048 IST [25402] LOG:  database system was shut down at 2025-03-02 15:18:21 IST
+2025-03-02 15:19:15.050 IST [25401] LOG:  database system is ready to accept connections
+2025-03-02 15:19:23.228 IST [25411] FATAL:  role "postgres" does not exist
+2025-03-02 15:23:56.799 IST [25401] LOG:  received fast shutdown request
+2025-03-02 15:23:56.800 IST [25401] LOG:  aborting any active transactions
+2025-03-02 15:23:56.802 IST [25401] LOG:  background worker "logical replication launcher" (PID 25408) exited with exit code 1
+2025-03-02 15:23:56.802 IST [25403] LOG:  shutting down
+2025-03-02 15:23:56.810 IST [25401] LOG:  database system is shut down
+2025-03-02 15:24:01.051 IST [25493] LOG:  starting PostgreSQL 14.17 (Homebrew) on aarch64-apple-darwin24.2.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit
+2025-03-02 15:24:01.052 IST [25493] LOG:  listening on IPv6 address "::1", port 5432
+2025-03-02 15:24:01.052 IST [25493] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2025-03-02 15:24:01.052 IST [25493] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2025-03-02 15:24:01.055 IST [25494] LOG:  database system was shut down at 2025-03-02 15:23:56 IST
+2025-03-02 15:24:01.057 IST [25493] LOG:  database system is ready to accept connections
+2025-03-02 15:31:39.251 IST [26126] FATAL:  database "twitter_scraper" does not exist
+2025-03-02 15:33:53.167 IST [26206] ERROR:  relation "tweets" does not exist at character 30
+2025-03-02 15:33:53.167 IST [26206] STATEMENT:  SELECT username, tweets FROM tweets WHERE tweet_id IN ('1895889955295215939')

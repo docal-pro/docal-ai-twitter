@@ -186,7 +186,7 @@ class TweetContextBuilder:
         try:
             process = await asyncio.create_subprocess_exec(
                 "node",
-                "./agent.js",
+                "agent/tweet.js",
                 tweet_id,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
