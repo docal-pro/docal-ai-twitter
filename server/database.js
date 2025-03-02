@@ -27,12 +27,28 @@ export async function checkDatabase() {
   try {
     await client.connect();
 
-    const res = await client.query(
+    const response = await client.query(
       "SELECT 1 FROM pg_database WHERE datname = $1",
       [process.env.DB_NAME]
     );
 
-    return res.rowCount > 0;
+    // Check if tables exist and their names are "tweets" and "score"
+    const tablesResponse = await client.query(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+    );
+
+    const tableNames = tablesResponse.rows.map((row) => row.table_name);
+    const requiredTables = ["tweets", "score"];
+    const hasAllTables = requiredTables.every((table) =>
+      tableNames.includes(table)
+    );
+
+    if (!hasAllTables) {
+      console.log('⚠️  Missing required tables ("tweets" and "score")');
+      return false;
+    }
+
+    return response.rowCount > 0;
   } catch (error) {
     console.error("❌ Error checking database existence:", error);
     return false;
@@ -46,35 +62,24 @@ export async function checkDatabase() {
  * @returns {Promise<boolean>} True if created, false if already exists.
  */
 export async function createDatabase() {
-  const adminClient = getAdminClient();
+  const client = getAdminClient();
 
   try {
-    await adminClient.connect();
+    await client.connect();
 
     // Check if the database already exists
     const dbName = process.env.DB_NAME;
     const checkDbQuery = `SELECT 1 FROM pg_database WHERE datname='${dbName}'`;
-    const dbExistsResult = await adminClient.query(checkDbQuery);
+    const dbExistsResult = await client.query(checkDbQuery);
 
     if (dbExistsResult.rowCount > 0) {
+      // Continue to create tables
       console.log(`ℹ️  Database "${dbName}" already exists`);
-      return false;
+    } else {
+      // Create the new database
+      await client.query(`CREATE DATABASE "${dbName}"`);
+      console.log(`✅ Database "${dbName}" created successfully`);
     }
-
-    // Create the new database
-    await adminClient.query(`CREATE DATABASE "${dbName}"`);
-    console.log(`✅ Database "${dbName}" created successfully`);
-
-    // Connect to the newly created database to create the 'tweets' table
-    const dbClient = new Client({
-      user: process.env.DB_USER,
-      host: process.env.DB_HOST,
-      database: dbName,
-      password: process.env.DB_PASSWORD,
-      port: process.env.DB_PORT,
-    });
-
-    await dbClient.connect();
 
     // Create the 'tweets' table
     const createTweetsTableQuery = `
@@ -84,7 +89,7 @@ export async function createDatabase() {
         tweet TEXT NOT NULL
       );
     `;
-    await dbClient.query(createTweetsTableQuery);
+    await client.query(createTweetsTableQuery);
     console.log(`✅ Table "tweets" created successfully in "${dbName}"`);
 
     // Create the 'score' table
@@ -92,20 +97,20 @@ export async function createDatabase() {
       CREATE TABLE IF NOT EXISTS score (
         username VARCHAR(100) NOT NULL,
         tweet_count INT NOT NULL,
-        score TINYINT CHECK (score BETWEEN 0 AND 100),
-        trust TINYINT CHECK (trust BETWEEN 0 AND 5),
-        investigate TINYINT CHECK (investigate BETWEEN 0 AND 4)
+        score SMALLINT CHECK (score BETWEEN 0 AND 100),
+        trust SMALLINT CHECK (trust BETWEEN 0 AND 5),
+        investigate SMALLINT CHECK (investigate BETWEEN 0 AND 4)
       );
     `;
-    await dbClient.query(createScoreTableQuery);
+    await client.query(createScoreTableQuery);
     console.log(`✅ Table "score" created successfully in "${dbName}"`);
 
-    await dbClient.end();
+    await client.end();
     return true;
   } catch (error) {
     console.error("❌ Error creating database or table:", error);
     return false;
   } finally {
-    await adminClient.end();
+    await client.end();
   }
 }

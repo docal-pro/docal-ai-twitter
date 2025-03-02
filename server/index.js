@@ -30,6 +30,9 @@ const fileExistsAndNotEmpty = (filePath) => {
 checkDatabase().then((exists) => {
   if (!exists) {
     createDatabase();
+    console.log("✅ Database created successfully");
+  } else {
+    console.log("✅ Database already exists");
   }
 });
 
@@ -40,7 +43,10 @@ app.get("/db", async (req, res) => {
     await client.connect();
     const result = await client.query("SELECT * FROM score");
     await client.end();
-    res.json({ db: result.rows });
+    res.json({
+      columns: result.fields.map((field) => field.name),
+      rows: result.rows,
+    });
   } catch (error) {
     console.error('❌ Error fetching data from "score" table:', error);
     res.status(500).json({ error: "An error occurred while fetching data" });
