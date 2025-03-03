@@ -49,16 +49,17 @@ export default {
       }
 
       const response = await fetch(serverUrl, fetchOptions);
+      const responseText = await response.text();
 
-      // Append CORS headers to the response
+      // Forward the actual server status code and response
       const corsHeaders = getCorsHeaders(request);
       const modifiedHeaders = new Headers(response.headers);
       Object.entries(corsHeaders).forEach(([key, value]) => {
         modifiedHeaders.set(key, value);
       });
 
-      return new Response(await response.text(), {
-        status: response.status,
+      return new Response(responseText, {
+        status: response.status,  // Forward the actual status code
         headers: modifiedHeaders,
       });
     } catch (err) {

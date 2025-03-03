@@ -147,13 +147,14 @@ def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
 
 
 async def main():
-    if len(sys.argv) != 3:
-        print("ℹ️  Usage: python tweet_scraper.py <tweet_ids> <flag>")
+    if len(sys.argv) != 4:
+        print("ℹ️  Usage: python scraper.py <tweet_ids> <username> <flag>")
         sys.exit(1)
 
     # Parse comma-separated tweet IDs
     tweet_ids = sys.argv[1].split(',')
-    flag = sys.argv[2]
+    username = sys.argv[2]
+    flag = sys.argv[3]
     
     # First check if tweets already exist
     status, existing_tweet_ids, existing_usernames, existing_tweets = check_existing_tweets(tweet_ids)
@@ -173,6 +174,12 @@ async def main():
         sys.exit(1)
     
     for tweet_data in tweets_data:
+        # Check if username (if not null) is the same as the one in the tweet
+        if username != "null":
+            if tweet_data['username'] != username:
+                print(f"⚠️  Username mismatch: {tweet_data['username']} != {username}. Skipping...")
+                continue
+
         # Create directory if it doesn't exist
         output_dir = f"tweets/{tweet_data['username']}"
         os.makedirs(output_dir, exist_ok=True)

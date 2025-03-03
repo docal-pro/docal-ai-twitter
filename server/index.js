@@ -11,6 +11,7 @@ import { join } from "path";
 import axios from "axios";
 import dotenv from "dotenv";
 import { checkDatabase, createDatabase, getAdminClient } from "./database.js";
+import { fakeUsers } from "./utils.js";
 
 dotenv.config();
 const { get } = axios;
@@ -45,7 +46,7 @@ app.get("/db", async (req, res) => {
     await client.end();
     res.json({
       columns: result.fields.map((field) => field.name),
-      rows: result.rows,
+      rows: result.rows.length > 0 ? result.rows : fakeUsers,
     });
   } catch (error) {
     console.error('❌ Error fetching data from "score" table:', error);
@@ -55,7 +56,7 @@ app.get("/db", async (req, res) => {
 
 // Method: Process an investigate request
 app.post("/process", (req, res) => {
-  const { function: func, data } = req.body;
+  const { func, user, data } = req.body;
   if (func === "indexer") {
     return res.status(501).json({ error: "Method currently unavailable" });
   }
@@ -65,19 +66,19 @@ app.post("/process", (req, res) => {
 
   let filePath;
   let tweetIds;
-  let user;
+  let username;
   if (func !== "scraper" && func !== "indexer") {
-    filePath = join(__dirname, `results/${user}/${func}.csv`);
-    user = data;
+    username = data;
+    filePath = join(__dirname, `results/${username}/${func}.csv`);
   } else if (func === "indexer") {
-    filePath = join(__dirname, `tweets/${user}/tweets.json`);
-    user = data;
+    username = data;
+    filePath = join(__dirname, `tweets/${username}/tweets.json`);
   } else if (func === "scraper") {
-    filePath = join(__dirname, `tweets/${user}/input.json`);
+    filePath = join(__dirname, `tweets/${user}/tweets.json`);
     tweetIds = data;
   }
 
-  if (!fileExistsAndNotEmpty(filePath)) {
+  if (func !== "scraper" && !fileExistsAndNotEmpty(filePath)) {
     try {
       unlinkSync(filePath); // Delete empty file if exists
     } catch (err) {}
@@ -87,9 +88,9 @@ app.post("/process", (req, res) => {
   const command =
     func !== "scraper"
       ? func !== "indexer"
-        ? `python3 ${func}.py ${user}` // Flag not needed
-        : `python3 ${func}.py ${user} ${flag}` // Indexer needs flag
-      : `python3 ${func}.py ${tweetIds} ${flag}`; // Scraper needs flag
+        ? `python3 ${func}.py ${username}` // Flag not needed
+        : `python3 ${func}.py ${username} ${flag}` // Indexer needs flag
+      : `python3 ${func}.py ${tweetIds} ${user} ${flag}`; // Scraper needs flag
   exec(command, (error, stdout, stderr) => {
     if (error) {
       return res.status(500).json({ error: stderr || error.message });
