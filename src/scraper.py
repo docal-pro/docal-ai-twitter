@@ -9,24 +9,27 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+def connect_to_database():
+    """Connect to the database"""
+    db_host = os.getenv('DB_HOST')
+    db_name = os.getenv('DB_NAME')
+    db_user = os.getenv('DB_USER')
+    db_pass = os.getenv('DB_PASSWORD')
+
+    connection = psycopg2.connect(
+        host=db_host, 
+        database=db_name,
+        user=db_user, 
+        password=db_pass
+    )
+    cursor = connection.cursor()
+    return connection, cursor
+
 
 def add_to_database(tweet_data: dict):
     """Add tweet data to the database"""
     try:
-        # Get DB config from environment
-        db_host = os.getenv('DB_HOST')
-        db_name = os.getenv('DB_NAME')
-        db_user = os.getenv('DB_USER')
-        db_pass = os.getenv('DB_PASSWORD')  
-
-        # Connect to database
-        connection = psycopg2.connect(
-            host=db_host,
-            database=db_name,
-            user=db_user,
-            password=db_pass
-        )
-        cursor = connection.cursor()
+        connection, cursor = connect_to_database()
 
         # Insert tweet data into database
         cursor.execute(
@@ -109,21 +112,8 @@ def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
     
     # Query the database for the tweet IDs
     try:
-        # Get DB config from environment
-        db_host = os.getenv('DB_HOST')
-        db_name = os.getenv('DB_NAME')
-        db_user = os.getenv('DB_USER')
-        db_pass = os.getenv('DB_PASSWORD')
-        
-        # Connect to database
-        connection = psycopg2.connect(
-            host=db_host,
-            database=db_name,
-            user=db_user,
-            password=db_pass
-        )
-        cursor = connection.cursor()
-        
+        connection, cursor = connect_to_database()
+
         # Query for tweets
         placeholders = ','.join(['%s'] * len(tweet_ids))
         cursor.execute(
