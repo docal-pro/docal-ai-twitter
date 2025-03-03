@@ -56,6 +56,9 @@ app.get("/db", async (req, res) => {
 // Method: Process an investigate request
 app.post("/process", (req, res) => {
   const { function: func, data } = req.body;
+  if (func === "indexer") {
+    return res.status(501).json({ error: "Method currently unavailable" });
+  }
   if (!func || !data) {
     return res.status(400).json({ error: "Missing function or data" });
   }
@@ -114,7 +117,7 @@ app.post("/state", (req, res) => {
 
 // Method: Trigger data indexing
 app.post("/trigger", async (req, res) => {
-  return res.status(501).json({ error: "Method currently unavailable" });
+  return res.status(502).json({ error: "Method currently unavailable" });
   const { user } = req.body;
   if (!user) {
     return res.status(400).json({ error: "Missing user" });
