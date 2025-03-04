@@ -1,7 +1,7 @@
 {
-  "name": "docal-ai",
+  "name": "docal-ai-twitter",
   "version": "0.0.1",
-  "description": "DOCAL AI",
+  "description": "DOCAL AI Twitter",
   "license": "MIT",
   "dependencies": {
     "agent-twitter-client": "^0.0.18",
@@ -16,11 +16,8 @@
   },
   "type": "module",
   "scripts": {
-    "init": "[ \"$(uname)\" = \"Linux\" ] && python3 -m venv venv && source venv/bin/activate",
+    "init": "python3 -m venv venv && sleep 1 && source venv/bin/activate",
     "pip-install": "sh -c \"if [[ $(uname) == 'Darwin' ]]; then pip install -r requirements_darwin.txt; else pip install -r requirements_linux.txt; fi\"",
-    "proxy-start": "wrangler dev",
-    "proxy-build": "wrangler build",
-    "proxy-deploy": "wrangler deploy",
     "server-start": "node server/index.js",
     "context": "python3 src/context.py",
     "classify": "python3 src/classifier.py",
@@ -28,8 +25,5 @@
     "evaluate": "python3 src/evaluator.py",
     "scrape": "python3 src/scraper.py",
     "index": "python3 src/indexer.py"
-  },
-  "devDependencies": {
-    "wrangler": "^3.109.2"
   }
 }
