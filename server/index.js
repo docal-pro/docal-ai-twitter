@@ -95,12 +95,13 @@ app.post("/process", (req, res) => {
     func !== "scraper"
       ? func !== "indexer"
         ? func === "classifier"
-          ? `python3 src/${func}.py ${username} ${ctxs}` // Classifier needs contexts
-          : `python3 src/${func}.py ${username}` // Other functions don't need contexts or flags
-        : `python3 src/${func}.py ${username} ${flag}` // Indexer needs flag
-      : `python3 src/${func}.py ${tweetIds} ${user} ${flag}`; // Scraper needs flag
+          ? `python3 src/${func}.py ${username} "${ctxs}"` // Classifier: needs contexts
+          : `python3 src/${func}.py ${username}` // Other functions: don't need contexts or flags
+        : `python3 src/${func}.py ${username} ${flag}` // Indexer: needs flag
+      : `python3 src/${func}.py ${tweetIds} ${user} ${flag} "${ctxs}"`; // Scraper: needs flag and contexts
   exec(command, (error, stdout, stderr) => {
     if (error) {
+      console.log(error);
       return res.status(500).json({ error: stderr || error.message });
     }
     res.json({ result: stdout.trim() });

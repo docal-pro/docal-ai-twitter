@@ -6,9 +6,11 @@ import asyncio
 import psycopg2
 from pathlib import Path
 from dotenv import load_dotenv
+from utils.utils import scorer
 
 # Load environment variables
 load_dotenv()
+
 
 def connect_to_database():
     """Connect to the database"""
@@ -40,8 +42,50 @@ def add_to_database(tweet_data: dict):
         connection.commit()
         cursor.close()
         connection.close()
+        print(f"✅ Tweet added to database")
     except Exception as e:
         print(f"❌ Error adding tweet to database: {e}")
+
+
+def add_to_score(username: str, tweet_count: int, score: float, trust: float, investigate: float, contexts: list):
+    """Add or update user score data in the twitter_score table"""
+    try:
+        connection, cursor = connect_to_database()
+
+        # Check if user exists
+        cursor.execute(
+            "SELECT * FROM twitter_score WHERE username = %s",
+            (username,)
+        )
+        user_exists = cursor.fetchone()
+
+        if user_exists:
+            # Update existing user
+            cursor.execute(
+                """
+                UPDATE twitter_score 
+                SET tweet_count = %s, score = %s, trust = %s, investigate = %s, contexts = %s, timestamp = %s
+                WHERE username = %s
+                """,
+                (tweet_count + user_exists[1], scorer([score, tweet_count], [user_exists[2], user_exists[1]]), trust + user_exists[3], investigate, list(set(contexts + user_exists[5])), datetime.now(), username)
+            )
+        else:
+            # Insert new user
+            cursor.execute(
+                """
+                INSERT INTO twitter_score 
+                (username, tweet_count, score, trust, investigate, contexts, timestamp)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (username, tweet_count, score, trust, investigate, contexts, datetime.now())
+            )
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print(f"✅ Score initialised in database")
+    except Exception as e:
+        print(f"❌ Error adding/updating score in database: {e}")
 
 
 async def get_tweets(tweet_ids: list[str], flag: str = "none"):
@@ -138,14 +182,15 @@ def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
 
 
 async def main():
-    if len(sys.argv) != 4:
-        print("ℹ️  Usage: python scraper.py <tweet_ids> <username> <flag>")
+    if len(sys.argv) != 5:
+        print("ℹ️  Usage: python scraper.py <tweet_ids> <username> <flag> <contexts>")
         sys.exit(1)
 
     # Parse comma-separated tweet IDs
     tweet_ids = sys.argv[1].split(',')
     username = sys.argv[2]
     flag = sys.argv[3]
+    ctxs = sys.argv[4].split(',')
     
     # First check if tweets already exist
     status, existing_tweet_ids, existing_usernames, existing_tweets = check_existing_tweets(tweet_ids)
@@ -187,11 +232,14 @@ async def main():
         
         with open(output_file, 'w') as f:
             json.dump(tweet_list, f, indent=2)
-
+        print(f"✅ Tweet saved to {output_file}")
+            
         # Add to database
         add_to_database(tweet_data)
         
-        print(f"✅ Tweet saved to {output_file}")
+        # Add to score
+        add_to_score(tweet_data['username'], len(tweet_list), 0, 0, 1, ctxs)
+        
 
 
 if __name__ == "__main__":
