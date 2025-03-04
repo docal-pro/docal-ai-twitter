@@ -1,4 +1,4 @@
-# `DOCAL AI`
+# `DOCAL AI Twitter`
 
 > This is a fork of original work done by [`David Lin`](https://github.com/davidlinjiahao) on [`frank-analyzer`](https://github.com/davidlinjiahao/frank_analyzer)
 
@@ -78,58 +78,51 @@ npm run init
 npm run pip-install
 ```
 
-### 3. Start proxy worker
-
-```bash
-# Shortcut to start the proxy worker
-npm run proxy-dev
-```
-
-### 4. Start server
+### 3. Start server
 
 ```bash
 # Shortcut to start the server
 npm run server-start
 ```
 
-### 5. Start context creator
+### 4. Start context creator
 
 ```bash
 # Shortcut to start the context creator for a specific `@user`
 npm run context $user
 ```
 
-### 6. Start classifier
+### 5. Start classifier
 
 ```bash
 # Shortcut to start the classifier for a specific `@user`
 npm run classify $user
 ```
 
-### 7. Start extractor
+### 6. Start extractor
 
 ```bash
 # Shortcut to start the extractor for a specific `@user`
 npm run extract $user
 ```
 
-### 8. Start evaluator
+### 7. Start evaluator
 
 ```bash
 # Shortcut to start the evaluator for a specific `@user`
 npm run evaluate $user
 ```
 
-### 9. Start scraper or indexer
+### 8. Start scraper or indexer
 
-#### 9.1. Start scraper for a tweet
+#### 8.1. Start scraper for a tweet
 
 ```bash
 # Shortcut to start the scraper for a specific `tweetId` with `flag`
 npm run scrape $tweetId $flag
 ```
 
-#### 9.2. Start indexer for a user
+#### 8.2. Start indexer for a user
 
 ```bash
 # Shortcut to start the indexer for a specific `@user` with `flag`
