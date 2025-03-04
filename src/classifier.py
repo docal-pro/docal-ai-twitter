@@ -17,7 +17,7 @@ import csv
 
 # Load arguments
 user = sys.argv[1]
-ctxs = sys.argv[2]
+ctxs = sys.argv[2]  # Comma-separated list of contexts to classify
 
 # Load environment variables
 load_dotenv()
@@ -36,30 +36,23 @@ def load_contexts(ctxs: str) -> List[str]:
 
 contexts = load_contexts(ctxs)
 
-SYSTEM_PROMPT = f"""You are analysing tweets from @{user}. Your task is to classify the tweet according to multiple criteria.
+def create_system_prompt(user: str, contexts: List[str]) -> str:
+    """Create system prompt based on user and contexts"""
+    prompt = f"""You are analysing tweets from @{user}. Your task is to classify the tweet according to multiple criteria.
 
-The criteria you will evaluate are: {ctxs}
+The criteria you will evaluate are: {', '.join(contexts)}
 
-For each criterion, provide a binary classification and brief reasoning.
-
-For the 'prediction' criterion, classify as 'Yes' ONLY if @{user} is explicitly expressing a directional view (bullish/bearish) about:
-1. Specific tokens (tradable crypto tokens like $BTC, $ETH, $HYPE)
-2. Projects (twitter accounts working in web3 without tokens yet) 
-3. Metas (crypto narratives like AI, NFT, DeFi, Layer 1, Layer 2, Meme Coins, RWA, SocialFi, GameFi, etc.)
-
-Examples of predictions:
-- "BTC to 100k" (Yes - clear price target)
-- "Layer 2s are going to explode this year" (Yes - directional view on L2s)
-- "I'm extremely bullish on NFTs" (Yes - directional view on NFTs)
-
-Examples of non-predictions:
-- "GM" (No - just a greeting)
-- "This project looks interesting" (No - observation without direction)
-- "What do you think about ETH?" (No - just a question)
+For each criterion, provide a binary classification (Yes/No) and brief reasoning.
 
 Return your response in this exact format for each criterion:
-{ctxs.upper()}: [Yes or No]
-REASONING: [1-2 sentences explaining why]"""
+"""
+    # Add format example for each context
+    for ctx in contexts:
+        prompt += f"{ctx.upper()}: [Yes or No]\nREASONING: [1-2 sentences explaining why]\n\n"
+    
+    return prompt.strip()
+
+SYSTEM_PROMPT = create_system_prompt(user, contexts)
 
 # Global progress tracking
 model_progress = defaultdict(
@@ -160,15 +153,14 @@ def retry_with_backoff(func, *args, max_retries=3, initial_delay=1):
             continue
 
 
-def get_deepseek_prediction(context: str) -> tuple[str, str]:
-    """Get prediction using DeepSeek R1 by OpenRouter"""
-
+def get_deepseek_prediction(context: str) -> Dict[str, Tuple[str, str]]:
+    """Get classifications using DeepSeek R1"""
     def _make_request():
-        if not os.getenv("OPENROUTER_API_KEY"):
+        if not OPENROUTER_API_KEY:
             raise Exception("401 Unauthorised - DeepSeek API key not found")
 
         headers = {
-            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
         }
         payload = {
@@ -186,36 +178,29 @@ def get_deepseek_prediction(context: str) -> tuple[str, str]:
         )
         response.raise_for_status()
         result = response.json()
-
-        if not result or "choices" not in result or not result["choices"]:
-            raise Exception("Empty or invalid response from DeepSeek")
-
         content = result["choices"][0]["message"]["content"]
 
-        # Parse the response
-        classification = (
-            "Prediction"
-            if "CLASSIFICATION: Prediction" in content
-            else "Not Prediction"
-        )
-        reasoning = (
-            content.split("REASONING:")[1].strip()
-            if "REASONING:" in content
-            else "No reasoning provided"
-        )
+        # Parse all classifications from response
+        classifications = {}
+        for ctx in contexts:
+            ctx_upper = ctx.upper()
+            if f"{ctx_upper}:" in content:
+                classification = "Yes" if f"{ctx_upper}: Yes" in content else "No"
+                reasoning = content.split(f"{ctx_upper}:")[1].split("REASONING:")[1].split("\n")[0].strip()
+                classifications[ctx] = (classification, reasoning)
+            else:
+                classifications[ctx] = ("Error", "Failed to parse response")
 
-        return classification, reasoning
+        return classifications
 
     try:
         return retry_with_backoff(_make_request)
     except Exception as e:
-        print(f"❌ Error with DeepSeek API after retries: {str(e)}")
-        return "Error", str(e)
+        return {ctx: ("Error", str(e)) for ctx in contexts}
 
 
-def get_gpt4_prediction(context: str) -> tuple[str, str]:
-    """Get prediction using GPT-4"""
-
+def get_gpt4_prediction(context: str) -> Dict[str, Tuple[str, str]]:
+    """Get classifications using GPT-4"""
     def _make_request():
         response = openai_client.chat.completions.create(
             model="gpt-4",
@@ -228,30 +213,27 @@ def get_gpt4_prediction(context: str) -> tuple[str, str]:
         )
         content = response.choices[0].message.content
 
-        # Parse the response
-        classification = (
-            "Prediction"
-            if "CLASSIFICATION: Prediction" in content
-            else "Not Prediction"
-        )
-        reasoning = (
-            content.split("REASONING:")[1].strip()
-            if "REASONING:" in content
-            else "No reasoning provided"
-        )
+        # Parse all classifications from response
+        classifications = {}
+        for ctx in contexts:
+            ctx_upper = ctx.upper()
+            if f"{ctx_upper}:" in content:
+                classification = "Yes" if f"{ctx_upper}: Yes" in content else "No"
+                reasoning = content.split(f"{ctx_upper}:")[1].split("REASONING:")[1].split("\n")[0].strip()
+                classifications[ctx] = (classification, reasoning)
+            else:
+                classifications[ctx] = ("Error", "Failed to parse response")
 
-        return classification, reasoning
+        return classifications
 
     try:
         return retry_with_backoff(_make_request)
     except Exception as e:
-        print(f"❌ Error with OpenAI API after retries: {str(e)}")
-        return "Error", str(e)
+        return {ctx: ("Error", str(e)) for ctx in contexts}
 
 
-def get_claude_prediction(context: str) -> tuple[str, str]:
-    """Get prediction using Claude Opus"""
-
+def get_claude_prediction(context: str) -> Dict[str, Tuple[str, str]]:
+    """Get classifications using Claude Opus"""
     def _make_request():
         if not os.getenv("ANTHROPIC_API_KEY"):
             raise Exception("401 Unauthorised - Claude API key not found")
@@ -265,129 +247,89 @@ def get_claude_prediction(context: str) -> tuple[str, str]:
         )
         content = response.content[0].text
 
-        # Parse the response
-        classification = (
-            "Prediction"
-            if "CLASSIFICATION: Prediction" in content
-            else "Not Prediction"
-        )
-        reasoning = (
-            content.split("REASONING:")[1].strip()
-            if "REASONING:" in content
-            else "No reasoning provided"
-        )
+        # Parse all classifications from response
+        classifications = {}
+        for ctx in contexts:
+            ctx_upper = ctx.upper()
+            if f"{ctx_upper}:" in content:
+                classification = "Yes" if f"{ctx_upper}: Yes" in content else "No"
+                reasoning = content.split(f"{ctx_upper}:")[1].split("REASONING:")[1].split("\n")[0].strip()
+                classifications[ctx] = (classification, reasoning)
+            else:
+                classifications[ctx] = ("Error", "Failed to parse response")
 
-        return classification, reasoning
+        return classifications
 
     try:
         return retry_with_backoff(_make_request)
     except Exception as e:
-        error_str = str(e)
-        if "credit balance is too low" in error_str.lower():
-            error_str = "Quota exceeded - Insufficient credit balance"
-        print(f"❌ Error with Claude API after retries: {error_str}")
-        return "Error", error_str
+        return {ctx: ("Error", str(e)) for ctx in contexts}
 
 
-def get_gemini_prediction(context: str) -> tuple[str, str]:
-    """Get prediction using Google Gemini"""
-
+def get_gemini_prediction(context: str) -> Dict[str, Tuple[str, str]]:
+    """Get classifications using Google Gemini"""
     def _make_request():
         if not os.getenv("GOOGLE_API_KEY"):
             raise Exception("401 Unauthorised - Gemini API key not found")
 
         model = genai.GenerativeModel("gemini-1.5-pro")
+        generation_config = genai.GenerationConfig(
+            temperature=0.0,
+            candidate_count=1,
+            max_output_tokens=100
+        )
 
-        try:
-            # Configure generation settings
-            generation_config = genai.GenerationConfig(
-                temperature=0.0, candidate_count=1, max_output_tokens=100
-            )
+        safety_settings = [
+            {
+                "category": genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                "threshold": genai.types.HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
+                "category": genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                "threshold": genai.types.HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
+                "category": genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                "threshold": genai.types.HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
+                "category": genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                "threshold": genai.types.HarmBlockThreshold.BLOCK_NONE,
+            },
+        ]
 
-            # Set safety settings using proper enums
-            safety_settings = [
-                {
-                    "category": genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                    "threshold": genai.types.HarmBlockThreshold.BLOCK_NONE,
-                },
-                {
-                    "category": genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                    "threshold": genai.types.HarmBlockThreshold.BLOCK_NONE,
-                },
-                {
-                    "category": genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                    "threshold": genai.types.HarmBlockThreshold.BLOCK_NONE,
-                },
-                {
-                    "category": genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                    "threshold": genai.types.HarmBlockThreshold.BLOCK_NONE,
-                },
-            ]
+        response = model.generate_content(
+            SYSTEM_PROMPT + "\n\nTWEET: " + context,
+            generation_config=generation_config,
+            safety_settings=safety_settings,
+        )
 
-            # Create a structured prompt
-            prompt = f"""TASK: Analyse if this tweet contains a crypto market prediction.
+        if not response.text:
+            raise Exception("Empty response from Gemini")
 
-TWEET: {context}
+        content = response.text
 
-FORMAT:
-CLASSIFICATION: [Prediction or Not Prediction]
-REASONING: [1-2 sentences explaining why]
-
-RULES:
-- Classify as 'Prediction' only if there's an explicit directional view (bullish/bearish)
-- Look for predictions about tokens, projects, or crypto narratives
-- General observations or questions are not predictions"""
-
-            response = model.generate_content(
-                prompt,
-                generation_config=generation_config,
-                safety_settings=safety_settings,
-            )
-
-            if not response.text:
-                raise Exception("Empty response from Gemini")
-
-            content = response.text
-
-            # Parse the response
-            if "CLASSIFICATION:" not in content or "REASONING:" not in content:
-                raise Exception(
-                    f"Invalid response format from Gemini: {content[:100]}..."
-                )
-
-            classification = (
-                "Prediction"
-                if "CLASSIFICATION: Prediction" in content
-                else "Not Prediction"
-            )
-            reasoning = (
-                content.split("REASONING:")[1].strip()
-                if "REASONING:" in content
-                else "No reasoning provided"
-            )
-
-            return classification, reasoning
-
-        except Exception as e:
-            error_msg = str(e)
-            if "safety" in error_msg.lower():
-                raise Exception(f"Safety error: {error_msg}")
-            elif "invalid" in error_msg.lower():
-                raise Exception(f"Invalid response: {error_msg}")
+        # Parse all classifications from response
+        classifications = {}
+        for ctx in contexts:
+            ctx_upper = ctx.upper()
+            if f"{ctx_upper}:" in content:
+                classification = "Yes" if f"{ctx_upper}: Yes" in content else "No"
+                reasoning = content.split(f"{ctx_upper}:")[1].split("REASONING:")[1].split("\n")[0].strip()
+                classifications[ctx] = (classification, reasoning)
             else:
-                raise Exception(f"Gemini error: {error_msg}")
+                classifications[ctx] = ("Error", "Failed to parse response")
+
+        return classifications
 
     try:
         return retry_with_backoff(_make_request)
     except Exception as e:
-        error_msg = str(e)
-        print(f"❌ Error with Gemini API after retries: {error_msg}")
-        return "Error", error_msg
+        return {ctx: ("Error", str(e)) for ctx in contexts}
 
 
-def get_perplexity_prediction(context: str) -> tuple[str, str]:
-    """Get prediction using Perplexity Sonar Pro"""
-
+def get_perplexity_prediction(context: str) -> Dict[str, Tuple[str, str]]:
+    """Get classifications using Perplexity Sonar Pro"""
     def _make_request():
         if not PERPLEXITY_API_KEY:
             raise Exception("401 Unauthorised - Perplexity API key not found")
@@ -405,32 +347,34 @@ def get_perplexity_prediction(context: str) -> tuple[str, str]:
             "temperature": 0.0,
         }
         response = requests.post(
-            "https://api.perplexity.ai/chat/completions", json=payload, headers=headers
+            "https://api.perplexity.ai/chat/completions",
+            json=payload,
+            headers=headers
         )
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
-        classification = (
-            "Prediction"
-            if "CLASSIFICATION: Prediction" in content
-            else "Not Prediction"
-        )
-        reasoning = (
-            content.split("REASONING:")[1].strip()
-            if "REASONING:" in content
-            else "No reasoning provided"
-        )
-        return classification, reasoning
+
+        # Parse all classifications from response
+        classifications = {}
+        for ctx in contexts:
+            ctx_upper = ctx.upper()
+            if f"{ctx_upper}:" in content:
+                classification = "Yes" if f"{ctx_upper}: Yes" in content else "No"
+                reasoning = content.split(f"{ctx_upper}:")[1].split("REASONING:")[1].split("\n")[0].strip()
+                classifications[ctx] = (classification, reasoning)
+            else:
+                classifications[ctx] = ("Error", "Failed to parse response")
+
+        return classifications
 
     try:
         return retry_with_backoff(_make_request)
     except Exception as e:
-        print(f"❌ Error with Perplexity API after retries: {str(e)}")
-        return "Error", str(e)
+        return {ctx: ("Error", str(e)) for ctx in contexts}
 
 
-def get_grok_prediction(context: str) -> tuple[str, str]:
-    """Get prediction using Grok 2 by OpenRouter"""
-
+def get_grok_prediction(context: str) -> Dict[str, Tuple[str, str]]:
+    """Get classifications using Grok 2 by OpenRouter"""
     def _make_request():
         headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -452,22 +396,24 @@ def get_grok_prediction(context: str) -> tuple[str, str]:
         )
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
-        classification = (
-            "Prediction"
-            if "CLASSIFICATION: Prediction" in content
-            else "Not Prediction"
-        )
-        reasoning = (
-            content.split("REASONING:")[1].strip()
-            if "REASONING:" in content
-            else "No reasoning provided"
-        )
-        return classification, reasoning
+
+        # Parse all classifications from response
+        classifications = {}
+        for ctx in contexts:
+            ctx_upper = ctx.upper()
+            if f"{ctx_upper}:" in content:
+                classification = "Yes" if f"{ctx_upper}: Yes" in content else "No"
+                reasoning = content.split(f"{ctx_upper}:")[1].split("REASONING:")[1].split("\n")[0].strip()
+                classifications[ctx] = (classification, reasoning)
+            else:
+                classifications[ctx] = ("Error", "Failed to parse response")
+
+        return classifications
 
     try:
         return retry_with_backoff(_make_request, max_retries=3, initial_delay=2)
     except Exception as e:
-        return "Error", str(e)
+        return {ctx: ("Error", str(e)) for ctx in contexts}
 
 
 async def save_progress(df: pd.DataFrame, output_file: str):
@@ -488,129 +434,45 @@ async def process_model(
     output_file: str,
 ):
     """Process all tweets for a single model"""
-    # Get the total number of tweets from the dataframe
     total_tweets = len(df)
-
-    # Count how many predictions we already have
-    has_prediction = ~df[f"prediction_{model_name}"].isna()
-    initial_completed = sum(has_prediction)
+    
+    # Count completed classifications for this model
+    completed = 0
+    for ctx in contexts:
+        col_name = f"{ctx}_{model_name}"
+        if col_name in df.columns:
+            completed += (~df[col_name].isna()).sum()
+    completed = completed // len(contexts)  # Average across all contexts
 
     model_progress[model_name] = {
-        "processed": initial_completed,
+        "processed": completed,
         "total": total_tweets,
         "status": "running",
         "text": "Running ⏯",
         "last_error": None,
     }
-    print_status_table()
-    print(f"\n🔎 Starting {model_name} model processing...")
-
-    error_count = 0
-    auth_error = False
-    quota_error = False
-    rate_limit_count = 0
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        for idx, context in tweets_to_process:
+        for idx, tweet in tweets_to_process:
             try:
-                # Skip processing if we've hit auth/quota errors
-                if auth_error or quota_error:
-                    continue
-
                 print(f"\n🔎 Processing tweet {idx+1} with {model_name}...")
-                pred, reason = await asyncio.get_event_loop().run_in_executor(
-                    executor, model_func, context
+                classifications = await asyncio.get_event_loop().run_in_executor(
+                    executor, model_func, tweet
                 )
+                
+                # Update DataFrame with classifications for each context
+                for ctx in contexts:
+                    classification, reasoning = classifications.get(ctx, ("Error", "Processing failed"))
+                    df.at[idx, f"{ctx}_{model_name}"] = classification
+                    df.at[idx, f"{ctx}_{model_name}_reasoning"] = reasoning
 
-                # Skip if we got an error response
-                if pred == "Error":
-                    error_str = reason.lower()
-                    model_progress[model_name]["last_error"] = reason
-                    print(f"\n❌ Error from {model_name}: {reason}")
-
-                    # Check for auth/quota errors
-                    if "401" in error_str or "unauthorized" in error_str:
-                        auth_error = True
-                        model_progress[model_name]["status"] = "unauthorised"
-                        model_progress[model_name]["text"] = " Access ✕"
-                        print_status_table()
-                        await save_progress(df, output_file)
-                        return
-                    elif "quota" in error_str or "credit" in error_str:
-                        quota_error = True
-                        model_progress[model_name]["status"] = "quota"
-                        model_progress[model_name]["text"] = "  Quota ✕"
-                        print_status_table()
-                        await save_progress(df, output_file)
-                        return
-                    elif "429" in error_str or "rate limit" in error_str:
-                        rate_limit_count += 1
-                        if rate_limit_count >= 3 and model_name == "grok":
-                            cooldown_minutes = 15
-                            print(
-                                f"\n⚠️  Grok rate limited. Pausing for {cooldown_minutes} minutes..."
-                            )
-                            model_progress[model_name][
-                                "status"
-                            ] = f"cooling"
-                            model_progress[model_name][
-                                "text"
-                            ] = f"Chill {cooldown_minutes}m"
-                            print_status_table()
-                            await save_progress(df, output_file)
-                            await asyncio.sleep(cooldown_minutes * 60)
-                            rate_limit_count = 0
-                            model_progress[model_name]["status"] = "running"
-                            model_progress[model_name]["text"] = " Running ⏯"
-                            print_status_table()
-                            continue
-
-                    error_count += 1
-                    if error_count >= 5:
-                        print(
-                            f"\n❌ {model_name} failed after 5 errors. Last error: {reason}"
-                        )
-                        model_progress[model_name]["status"] = "failed"
-                        model_progress[model_name]["text"] = " Failed ✕"
-                        print_status_table()
-                        await save_progress(df, output_file)
-                        return
-                    continue
-
-                # Reset rate limit count on successful request
-                rate_limit_count = 0
-
-                df.at[idx, f"prediction_{model_name}"] = pred
-                df.at[idx, f"reasoning_{model_name}"] = reason
-
-                print(f"➡️  {model_name} prediction: {pred}")
-                print(f"➡️  Reasoning: {reason}")
-
-                # Update progress
-                has_prediction = ~df[f"prediction_{model_name}"].isna()
-                model_progress[model_name]["processed"] = sum(has_prediction)
-
-                if model_progress[model_name]["processed"] % 5 == 0:
-                    await save_progress(df, output_file)
-
-                df["consensus_prediction"] = calculate_consensus_prediction(df)
+                model_progress[model_name]["processed"] += 1
+                await save_progress(df, output_file)
                 print_status_table()
 
             except Exception as e:
-                error_str = str(e)
-                print(f"\n⚠️  Unexpected error from {model_name}: {error_str}")
-                model_progress[model_name]["last_error"] = error_str
-                error_count += 1
-
-                if error_count >= 5:
-                    print(
-                        f"\n❌ {model_name} failed after 5 unexpected errors. Last error: {error_str}"
-                    )
-                    model_progress[model_name]["status"] = "failed"
-                    model_progress[model_name]["text"] = " Failed ✕"
-                    print_status_table()
-                    await save_progress(df, output_file)
-                    return
+                print(f"❌ Error processing tweet with {model_name}: {str(e)}")
+                model_progress[model_name]["last_error"] = str(e)
                 continue
 
     model_progress[model_name]["status"] = "complete"
@@ -627,7 +489,7 @@ def calculate_consensus_prediction(df: pd.DataFrame) -> pd.Series:
     def get_consensus(row):
         # Get all missing columns
         missing_cols = [
-            f"prediction_{model}" for model in models if f"prediction_{model}" not in row
+            f"{ctx}_{model}" for ctx in contexts for model in models if f"{ctx}_{model}" not in row
         ]
 
         if missing_cols:
@@ -636,7 +498,7 @@ def calculate_consensus_prediction(df: pd.DataFrame) -> pd.Series:
             return None  
         
         # Get all predictions for this row
-        predictions = [row[f"prediction_{model}"] for model in models]
+        predictions = [row[f"{ctx}_{model}"] for ctx in contexts for model in models]
         # Count valid predictions (ignore None/NaN)
         valid_predictions = [p for p in predictions if pd.notna(p)]
 
@@ -720,21 +582,21 @@ async def classify_tweets_async(input_file: str, output_file: str):
 
             # Copy over existing predictions for each model
             for model in ["deepseek", "gpt4", "claude", "gemini", "perplexity", "grok"]:
-                if f"prediction_{model}" in df.columns:
+                if f"{model}_prediction" in df.columns:
                     # Create a mapping using the key
                     pred_map = pd.Series(
-                        df[f"prediction_{model}"].values, index=df["key"]
+                        df[f"{model}_prediction"].values, index=df["key"]
                     ).to_dict()
                     reason_map = pd.Series(
-                        df[f"reasoning_{model}"].values, index=df["key"]
+                        df[f"{model}_reasoning"].values, index=df["key"]
                     ).to_dict()
 
                     # Map the predictions/reasoning to the new DataFrame
-                    new_df[f"prediction_{model}"] = new_df["key"].map(pred_map)
-                    new_df[f"reasoning_{model}"] = new_df["key"].map(reason_map)
+                    new_df[f"{model}_prediction"] = new_df["key"].map(pred_map)
+                    new_df[f"{model}_reasoning"] = new_df["key"].map(reason_map)
 
                     # Count non-null predictions
-                    completed = new_df[f"prediction_{model}"].notna().sum()
+                    completed = new_df[f"{model}_prediction"].notna().sum()
                     print(f"✅ Copied {completed} predictions for {model}")
 
             # Remove the temporary key column
@@ -765,17 +627,18 @@ async def classify_tweets_async(input_file: str, output_file: str):
     # Initialise progress for all models with total_tweets as denominator
     for model in models.keys():
         # Initialise prediction columns if they don't exist
-        if f"prediction_{model}" not in df.columns:
-            df[f"prediction_{model}"] = None
-            df[f"reasoning_{model}"] = None
-            print(f"✅ Initialised columns for {model}")
+        for ctx in contexts:
+            if f"{ctx}_{model}" not in df.columns:
+                df[f"{ctx}_{model}"] = None
+                df[f"{ctx}_{model}_reasoning"] = None
+                print(f"✅ Initialised columns for {ctx} and {model}")
 
         # Count how many predictions we already have
-        has_prediction = ~df[f"prediction_{model}"].isna()
+        has_prediction = ~df[f"{ctx}_{model}"].isna()
         completed = sum(has_prediction)
-        print(f"✅ Found {completed} existing predictions for {model}")
+        print(f"✅ Found {completed} existing predictions for {ctx} and {model}")
 
-        model_progress[model] = {
+        model_progress[f"{ctx}_{model}"] = {
             "processed": completed,
             "total": total_tweets,
             "status": "complete" if completed == total_tweets else "waiting",
@@ -815,7 +678,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
     tasks = []
     for model_name, model_func in models.items():
         # Find tweets that need this model's prediction
-        needs_processing = df[f"prediction_{model_name}"].isna()
+        needs_processing = df[f"{model_name}_prediction"].isna()
         tweets_to_process = [
             (idx, row["context"])
             for idx, row in df[needs_processing].iterrows()
@@ -828,7 +691,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
             )
             tasks.append(
                 process_model(
-                    model_name, model_func, tweets_to_process, df, output_file
+                    f"{model_name}_prediction", model_func, tweets_to_process, df, output_file
                 )
             )
 
@@ -841,7 +704,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
             print_status_table()
 
             # Check if Gemini failed
-            if model_progress["gemini"]["status"] == "failed":
+            if model_progress["gemini_prediction"]["status"] == "failed":
                 print("\n❌ Gemini model failed. Would you like to:")
                 print("1. Retry with adjusted safety settings")
                 print("2. Skip Gemini and continue with other models")
@@ -851,12 +714,12 @@ async def classify_tweets_async(input_file: str, output_file: str):
                 if choice == "1":
                     print("\n➡️  Retrying Gemini with adjusted settings...")
                     # Reset Gemini progress
-                    needs_processing = df["prediction_gemini"].isna()
+                    needs_processing = df["gemini_prediction"].isna()
                     tweets_to_process = [
                         (idx, row["context"])
                         for idx, row in df[needs_processing].iterrows()
                     ]
-                    model_progress["gemini"] = {
+                    model_progress["gemini_prediction"] = {
                         "processed": total_tweets - len(tweets_to_process),
                         "total": total_tweets,
                         "status": "retrying",
@@ -864,7 +727,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
                         "last_error": None,
                     }
                     await process_model(
-                        "gemini",
+                        "gemini_prediction",
                         get_gemini_prediction,
                         tweets_to_process,
                         df,
@@ -873,7 +736,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
                 elif choice == "2":
                     print("\n⚠️  Skipping Gemini, continuing with other models...")
                     remaining_tasks = [
-                        t for t in tasks if t._coro.__name__ != "process_model_gemini"
+                        t for t in tasks if t._coro.__name__ != "process_model_gemini_prediction"
                     ]
                     await asyncio.gather(*remaining_tasks)
                 else:

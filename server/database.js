@@ -38,13 +38,15 @@ export async function checkDatabase() {
     );
 
     const tableNames = tablesResponse.rows.map((row) => row.table_name);
-    const requiredTables = ["tweets", "score"];
+    const requiredTables = ["twitter", "twitter_score"];
     const hasAllTables = requiredTables.every((table) =>
       tableNames.includes(table)
     );
 
     if (!hasAllTables) {
-      console.log('⚠️  Missing required tables ("tweets" and "score")');
+      console.log(
+        "⚠️  Missing required tables ('twitter' and 'twitter_score')"
+      );
       return false;
     }
 
@@ -83,7 +85,7 @@ export async function createDatabase() {
 
     // Create the 'tweets' table
     const createTweetsTableQuery = `
-      CREATE TABLE IF NOT EXISTS tweets (
+      CREATE TABLE IF NOT EXISTS twitter (
         tweet_id VARCHAR(50) PRIMARY KEY,
         username VARCHAR(100) NOT NULL,
         tweet TEXT NOT NULL,
@@ -91,11 +93,11 @@ export async function createDatabase() {
       );
     `;
     await client.query(createTweetsTableQuery);
-    console.log(`✅ Table "tweets" created successfully in "${dbName}"`);
+    console.log(`✅ Table "twitter" created successfully in "${dbName}"`);
 
     // Create the 'score' table
-    const createScoreTableQuery = `
-      CREATE TABLE IF NOT EXISTS score (
+    const createTwitterScoreTableQuery = `
+      CREATE TABLE IF NOT EXISTS twitter_score (
         username VARCHAR(100) NOT NULL,
         tweet_count INT NOT NULL,
         score SMALLINT CHECK (score BETWEEN 0 AND 100),
@@ -105,8 +107,8 @@ export async function createDatabase() {
         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `;
-    await client.query(createScoreTableQuery);
-    console.log(`✅ Table "score" created successfully in "${dbName}"`);
+    await client.query(createTwitterScoreTableQuery);
+    console.log(`✅ Table "twitter_score" created successfully in "${dbName}"`);
 
     await client.end();
     return true;

@@ -31,8 +31,16 @@ export default {
 
     try {
       const url = new URL(request.url);
-      const path = url.pathname.split("/")[1]; // Extract method name
-      const serverUrl = env.SERVER_URL + "/" + path; // Server URL with method
+      const type = url.pathname.split("/")[1]; // Extract type name
+      const path = url.pathname.split("/")[2]; // Extract method name
+      const serverUrl =
+        env.SERVER_URL +
+        ":" +
+        (type === "twitter"
+          ? env.SERVER_PORT_TWITTER
+          : env.SERVER_PORT_DISCOURSE) +
+        "/" +
+        path; // Server URL with method
 
       let requestBody = {};
       const headers = { "Content-Type": "application/json" };
@@ -59,7 +67,7 @@ export default {
       });
 
       return new Response(responseText, {
-        status: response.status,  // Forward the actual status code
+        status: response.status, // Forward the actual status code
         headers: modifiedHeaders,
       });
     } catch (err) {

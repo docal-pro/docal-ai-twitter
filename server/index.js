@@ -37,19 +37,19 @@ checkDatabase().then((exists) => {
   }
 });
 
-// Method: Get all records from the 'score' table
+// Method: Get all records from the 'twitter_score' table
 app.get("/db", async (req, res) => {
   try {
     const client = getAdminClient();
     await client.connect();
-    const result = await client.query("SELECT * FROM score");
+    const result = await client.query("SELECT * FROM twitter_score");
     await client.end();
     res.json({
       columns: result.fields.map((field) => field.name),
       rows: result.rows.length > 0 ? result.rows : fakeUsers,
     });
   } catch (error) {
-    console.error('❌ Error fetching data from "score" table:', error);
+    console.error("❌ Error fetching data from 'twitter_score' table:", error);
     res.status(500).json({ error: "An error occurred while fetching data" });
   }
 });
@@ -103,7 +103,7 @@ app.post("/process", (req, res) => {
 
 // Method: Get the state of an investigation
 app.post("/state", (req, res) => {
-  const { function: func, user, ctxs } = req.body;
+  const { func, user } = req.body;
   if (!func || !user) {
     return res.status(400).json({ error: "Missing function or user" });
   }

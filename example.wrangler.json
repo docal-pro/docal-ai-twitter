@@ -10,6 +10,8 @@
 		"enabled": true
 	},
 	"vars": {
-		"SERVER_URL": "https://store.docal.pro"
+		"SERVER_URL": "https://store.docal.pro",
+		"SERVER_PORT_TWITTER": "3030",
+		"SERVER_PORT_DISCOURSE": "3031"
 	}
 }
