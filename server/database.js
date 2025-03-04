@@ -8,7 +8,7 @@ dotenv.config();
  * Creates a new PostgreSQL client without connecting to a specific database.
  * Used for checking and creating databases.
  */
-export function getAdminClient() {
+function getInitClient() {
   return new Client({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -18,11 +18,24 @@ export function getAdminClient() {
 }
 
 /**
+ * Creates a new PostgreSQL client without connecting to a specific database.
+ * Used for checking and creating databases.
+ */
+export function getAdminClient() {
+  return new Client({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  });
+}
+
+/**
  * Checks if a PostgreSQL database exists.
  * @returns {Promise<boolean>} True if DB exists, false otherwise.
  */
 export async function checkDatabase() {
-  const client = getAdminClient();
+  const client = getInitClient();
 
   try {
     await client.connect();
@@ -64,7 +77,7 @@ export async function checkDatabase() {
  * @returns {Promise<boolean>} True if created, false if already exists.
  */
 export async function createDatabase() {
-  const client = getAdminClient();
+  const client = getInitClient();
   let dbClient = null;
 
   try {

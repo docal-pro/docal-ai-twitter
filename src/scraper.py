@@ -34,7 +34,7 @@ def add_to_database(tweet_data: dict):
 
         # Insert tweet data into database
         cursor.execute(
-            "INSERT INTO tweets (tweet_id, username, tweet, timestamp) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO twitter (tweet_id, username, tweet, timestamp) VALUES (%s, %s, %s, %s)",
             (tweet_data['id'], tweet_data['username'], tweet_data['text'], datetime.now())
         )
         connection.commit()
@@ -118,7 +118,7 @@ def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
         # Query for tweets
         placeholders = ','.join(['%s'] * len(tweet_ids))
         cursor.execute(
-            f"SELECT tweet_id, username, tweet FROM tweets WHERE tweet_id IN ({placeholders})",
+            f"SELECT tweet_id, username, tweet FROM twitter WHERE tweet_id IN ({placeholders})",
             tuple(tweet_ids)
         )
         results = cursor.fetchall()
@@ -155,7 +155,7 @@ async def main():
 
     if not tweet_ids:
         print(f"✅ Tweets already exist")
-        sys.exit(1)
+        sys.exit(0)
 
     # If not found, proceed with fetching the tweet
     tweets_data = await get_tweets(tweet_ids, flag)
