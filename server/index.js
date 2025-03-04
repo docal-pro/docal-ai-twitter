@@ -56,7 +56,7 @@ app.get("/db", async (req, res) => {
 
 // Method: Process an investigate request
 app.post("/process", (req, res) => {
-  const { func, user, data } = req.body;
+  const { func, user, data, ctxs } = req.body;
   if (func === "indexer") {
     return res.status(501).json({ error: "Method currently unavailable" });
   }
@@ -88,7 +88,9 @@ app.post("/process", (req, res) => {
   const command =
     func !== "scraper"
       ? func !== "indexer"
-        ? `python3 ${func}.py ${username}` // Flag not needed
+        ? func === "classifier"
+          ? `python3 ${func}.py ${username} ${ctxs}` // Classifier needs contexts
+          : `python3 ${func}.py ${username}` // Other functions don't need contexts or flags
         : `python3 ${func}.py ${username} ${flag}` // Indexer needs flag
       : `python3 ${func}.py ${tweetIds} ${user} ${flag}`; // Scraper needs flag
   exec(command, (error, stdout, stderr) => {
@@ -101,7 +103,7 @@ app.post("/process", (req, res) => {
 
 // Method: Get the state of an investigation
 app.post("/state", (req, res) => {
-  const { function: func, user } = req.body;
+  const { function: func, user, ctxs } = req.body;
   if (!func || !user) {
     return res.status(400).json({ error: "Missing function or user" });
   }

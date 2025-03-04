@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 import sys
@@ -33,8 +34,8 @@ def add_to_database(tweet_data: dict):
 
         # Insert tweet data into database
         cursor.execute(
-            "INSERT INTO tweets (tweet_id, username, tweet) VALUES (%s, %s, %s)",
-            (tweet_data['id'], tweet_data['username'], tweet_data['text'])
+            "INSERT INTO tweets (tweet_id, username, tweet, timestamp) VALUES (%s, %s, %s, %s)",
+            (tweet_data['id'], tweet_data['username'], tweet_data['text'], datetime.now())
         )
         connection.commit()
         cursor.close()

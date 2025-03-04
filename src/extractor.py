@@ -36,21 +36,21 @@ PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 GROK_API_KEY = os.getenv("GROK_API_KEY")
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,  # Show all info messages
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("logs/extractor.log"),  # Still log everything to file
-        logging.StreamHandler(
-            sys.stdout
-        ),  # But only show important messages in console
-    ],
-)
+def setup_logging(user: str):
+    log_dir = f"results/{user}/logs"
+    os.makedirs(log_dir, exist_ok=True)
+    
+    logging.basicConfig(
+        level=logging.INFO,  # Show all info messages
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler(f"{log_dir}/extractor.log"),  # Log to user-specific directory
+            logging.StreamHandler(sys.stdout),  # But only show important messages in console
+        ],
+    )
 
 # Constants
 BACKUP_INTERVAL = 10  # Save backup every 10 processed items
-CHECKPOINT_DIR = "checkpoints"
-CACHE_DIR = "cache"
 MAX_RETRIES = 3
 RATE_LIMIT_PAUSE = 1  # seconds
 
@@ -122,9 +122,6 @@ Return your response in this exact JSON format:
     "reasoning": "brief explanation"
 }"""
 
-# Ensure directories exist
-os.makedirs(CHECKPOINT_DIR, exist_ok=True)
-os.makedirs(CACHE_DIR, exist_ok=True)
 
 # Global progress tracking
 model_progress = defaultdict(
@@ -539,15 +536,23 @@ async def process_meta_target(target_name: str) -> Tuple[str, Dict]:
 
     return display_name, market_data
 
-
 class TargetExtractor:
-    def __init__(self):
-        self.cache = Cache(os.path.join(CACHE_DIR, "target_cache.json"))
+    def __init__(self, user: str):
+        # Initialize directories using user value
+        self.checkpoint_dir = f"results/{user}/checkpoints"
+        self.cache_dir = f"results/{user}/cache"
+        
+        # Create directories
+        os.makedirs(self.checkpoint_dir, exist_ok=True)
+        os.makedirs(self.cache_dir, exist_ok=True)
+        
+        # Update cache path with user-specific directory
+        self.cache = Cache(os.path.join(self.cache_dir, "extractor_cache.json"))
         self.session = None
         self.processed_count = 0
         self.last_backup = 0
         self.checkpoint_file = os.path.join(
-            CHECKPOINT_DIR, "processing_checkpoint.json"
+            self.checkpoint_dir, "extractor_checkpoint.json"
         )
 
     async def init_session(self):
@@ -733,7 +738,7 @@ class TargetExtractor:
 
     def _save_model_progress(self, model_name: str, processed_count: int):
         """Save individual model progress to a file"""
-        progress_file = os.path.join(CHECKPOINT_DIR, f"{model_name}_progress.json")
+        progress_file = os.path.join(self.checkpoint_dir, f"extractor_{model_name}.json")
         with open(progress_file, "w") as f:
             json.dump(
                 {
@@ -746,7 +751,7 @@ class TargetExtractor:
 
     def _load_model_progress(self, model_name: str) -> Optional[int]:
         """Load saved progress for a model"""
-        progress_file = os.path.join(CHECKPOINT_DIR, f"{model_name}_progress.json")
+        progress_file = os.path.join(self.checkpoint_dir, f"extractor_{model_name}.json")
         try:
             with open(progress_file, "r") as f:
                 data = json.load(f)
@@ -983,7 +988,7 @@ class TargetExtractor:
     def _save_backup(self, results: List[Dict]):
         """Save backup of processed results"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = os.path.join(CHECKPOINT_DIR, f"backup_{timestamp}.json")
+        backup_file = os.path.join(self.checkpoint_dir, f"extractor_backup_{timestamp}.json")
         with open(backup_file, "w") as f:
             json.dump(results, f)
         logging.info(f"✅ Backup saved: {backup_file}")
@@ -1056,6 +1061,9 @@ async def check_files():
 
 async def main():
     print("\n🔎 Starting extraction process...")
+    
+    # Setup logging with user-specific directory
+    setup_logging(user)
 
     if not await check_files():
         print("❌ Initialisation checks failed. Exiting...")
@@ -1063,7 +1071,7 @@ async def main():
 
     try:
         print("\n🔎 Initialising extractor...")
-        extractor = TargetExtractor()
+        extractor = TargetExtractor(user)
         input_file = f"results/{user}/classifier.csv"
         output_file = f"results/{user}/extractor.csv"
         print(f"\n🔎 Processing file: {input_file}")

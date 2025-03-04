@@ -512,9 +512,9 @@ async def main():
     output_file = f"results/{user}/context.csv"
     backup_dir = f"results/{user}/backups"
     checkpoints_dir = f"results/{user}/checkpoints"
-    checkpoint_file = f"{checkpoints_dir}/checkpoint.csv"
-    processed_ids_file = f"{checkpoints_dir}/processed.json"
-    batch_size = 100  # Process tweets in batches
+    checkpoint_file = f"{checkpoints_dir}/context_checkpoint.csv"
+    processed_ids_file = f"{checkpoints_dir}/context_processed.json"
+    batch_size = 5  # Process tweets in batches
 
     # Create backup directory if it doesn't exist
     if not os.path.exists(backup_dir):

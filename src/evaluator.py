@@ -295,7 +295,7 @@ class CryptoConsensusAnalyser:
         error_types = {"unknown_target": 0, "price_lookup": 0, "other": 0}
 
         # Process in batches to avoid rate limits
-        batch_size = 10
+        batch_size = 5
         for i in range(0, len(predictions_df), batch_size):
             batch = predictions_df.iloc[i : i + batch_size]
 

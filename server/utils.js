@@ -11,4 +11,6 @@ export const fakeUsers = fakeUsernames.map((username, i) => ({
   score: 0,
   trust: 0,
   investigate: 0,
+  contexts: [],
+  timestamp: null,
 }));

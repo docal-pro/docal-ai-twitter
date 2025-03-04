@@ -17,6 +17,7 @@ import csv
 
 # Load arguments
 user = sys.argv[1]
+ctxs = sys.argv[2]
 
 # Load environment variables
 load_dotenv()
@@ -29,25 +30,35 @@ PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 GROK_API_KEY = os.getenv("GROK_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-SYSTEM_PROMPT = f"""You are analysing tweets from @{user}. Your task is to determine if the tweet contains a prediction about the crypto market.
+def load_contexts(ctxs: str) -> List[str]:
+    """Load the contexts from the input"""
+    return ctxs.split(",")
 
-Classify as 'Prediction' ONLY if @{user} is explicitly expressing a directional view (bullish/bearish) about:
+contexts = load_contexts(ctxs)
+
+SYSTEM_PROMPT = f"""You are analysing tweets from @{user}. Your task is to classify the tweet according to multiple criteria.
+
+The criteria you will evaluate are: {ctxs}
+
+For each criterion, provide a binary classification and brief reasoning.
+
+For the 'prediction' criterion, classify as 'Yes' ONLY if @{user} is explicitly expressing a directional view (bullish/bearish) about:
 1. Specific tokens (tradable crypto tokens like $BTC, $ETH, $HYPE)
-2. Projects (twitter accounts working in web3 without tokens yet)
+2. Projects (twitter accounts working in web3 without tokens yet) 
 3. Metas (crypto narratives like AI, NFT, DeFi, Layer 1, Layer 2, Meme Coins, RWA, SocialFi, GameFi, etc.)
 
 Examples of predictions:
-- "BTC to 100k" (Prediction - clear price target)
-- "Layer 2s are going to explode this year" (Prediction - directional view on L2s)
-- "I'm extremely bullish on NFTs" (Prediction - directional view on NFTs)
+- "BTC to 100k" (Yes - clear price target)
+- "Layer 2s are going to explode this year" (Yes - directional view on L2s)
+- "I'm extremely bullish on NFTs" (Yes - directional view on NFTs)
 
 Examples of non-predictions:
-- "GM" (Not Prediction - just a greeting)
-- "This project looks interesting" (Not Prediction - observation without direction)
-- "What do you think about ETH?" (Not Prediction - just a question)
+- "GM" (No - just a greeting)
+- "This project looks interesting" (No - observation without direction)
+- "What do you think about ETH?" (No - just a question)
 
-Return your response in this exact format:
-CLASSIFICATION: [Prediction or Not Prediction]
+Return your response in this exact format for each criterion:
+{ctxs.upper()}: [Yes or No]
 REASONING: [1-2 sentences explaining why]"""
 
 # Global progress tracking
@@ -58,6 +69,13 @@ model_progress = defaultdict(
 # Global file lock for saving progress
 file_lock = asyncio.Lock()
 
+def load_checkpoint(output_file: str) -> int:
+    """Load the checkpoint by counting data lines in the output CSV file"""
+    if os.path.exists(output_file):
+        with open(output_file, 'r') as f:
+            # Subtract 1 to account for header line
+            return sum(1 for line in f) - 1
+    return 0
 
 def clear_terminal():
     """Clear the terminal screen"""
@@ -788,6 +806,9 @@ async def classify_tweets_async(input_file: str, output_file: str):
     # Save with consensus column
     df.to_csv(output_file, index=False)
 
+    # Load checkpoint
+    checkpoint = load_checkpoint(output_file)
+
     print_status_table()
 
     # Create tasks for each model with their pending tweets
@@ -798,7 +819,7 @@ async def classify_tweets_async(input_file: str, output_file: str):
         tweets_to_process = [
             (idx, row["context"])
             for idx, row in df[needs_processing].iterrows()
-            if idx >= 0
+            if idx >= checkpoint
         ]
 
         if tweets_to_process:

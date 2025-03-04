@@ -86,7 +86,8 @@ export async function createDatabase() {
       CREATE TABLE IF NOT EXISTS tweets (
         tweet_id VARCHAR(50) PRIMARY KEY,
         username VARCHAR(100) NOT NULL,
-        tweet TEXT NOT NULL
+        tweet TEXT NOT NULL,
+        timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `;
     await client.query(createTweetsTableQuery);
@@ -99,7 +100,9 @@ export async function createDatabase() {
         tweet_count INT NOT NULL,
         score SMALLINT CHECK (score BETWEEN 0 AND 100),
         trust SMALLINT CHECK (trust BETWEEN 0 AND 5),
-        investigate SMALLINT CHECK (investigate BETWEEN 0 AND 4)
+        investigate SMALLINT CHECK (investigate BETWEEN 0 AND 4),
+        contexts TEXT[] NOT NULL,
+        timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `;
     await client.query(createScoreTableQuery);
