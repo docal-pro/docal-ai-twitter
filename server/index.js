@@ -12,11 +12,17 @@ import axios from "axios";
 import dotenv from "dotenv";
 import { checkDatabase, createDatabase, getAdminClient } from "./database.js";
 import { fakeUsers } from "./utils.js";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 dotenv.config();
 const { get } = axios;
 const app = express();
 app.use(json());
+
+// Add these lines near the top of the file after imports
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Twitter/X API Bearer Token
 const TWITTER_BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
@@ -28,10 +34,10 @@ const fileExistsAndNotEmpty = (filePath) => {
 };
 
 // Check if database exists and create it if it doesn't
-checkDatabase().then((exists) => {
+checkDatabase().then(async (exists) => {
   if (!exists) {
-    createDatabase();
-    console.log("✅ Database created successfully");
+    console.log("ℹ️  Creating database...");
+    await createDatabase();
   } else {
     console.log("✅ Database already exists");
   }
