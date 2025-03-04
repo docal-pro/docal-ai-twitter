@@ -63,9 +63,7 @@ app.get("/db", async (req, res) => {
 // Method: Process an investigate request
 app.post("/process", (req, res) => {
   const { func, user, data, ctxs } = req.body;
-  if (func === "indexer") {
-    return res.status(501).json({ error: "Method currently unavailable" });
-  }
+
   if (!func || !data) {
     return res.status(400).json({ error: "Missing function or data" });
   }
@@ -97,7 +95,7 @@ app.post("/process", (req, res) => {
         ? func === "classifier"
           ? `python3 src/${func}.py ${username} "${ctxs}"` // Classifier: needs contexts
           : `python3 src/${func}.py ${username}` // Other functions: don't need contexts or flags
-        : `python3 src/${func}.py ${username} ${flag}` // Indexer: needs flag
+        : `python3 src/${func}.py ${username} ${flag} "${ctxs}"` // Indexer: needs flag and contexts
       : `python3 src/${func}.py ${tweetIds} ${user} ${flag} "${ctxs}"`; // Scraper: needs flag and contexts
   exec(command, (error, stdout, stderr) => {
     if (error) {
@@ -110,19 +108,46 @@ app.post("/process", (req, res) => {
 
 // Method: Get the state of an investigation
 app.post("/state", (req, res) => {
-  const { func, user } = req.body;
-  if (!func || !user) {
-    return res.status(400).json({ error: "Missing function or user" });
+  const { user } = req.body;
+  if (!user) {
+    return res.status(400).json({ error: "Missing user" });
   }
 
-  const filePath = join(__dirname, `results/${user}/${func}.csv`);
+  const resultsPath = join(__dirname, `results/${user}`);
+  const tweetsPath = join(__dirname, `tweets/${user}/input.json`);
 
-  if (!existsSync(filePath)) {
-    return res.status(404).json({ error: "File not found" });
+  const state = {
+    results: {},
+    tweets: 0,
+  };
+
+  // Get counts from CSV files in results directory
+  if (existsSync(resultsPath)) {
+    const files = readdirSync(resultsPath).filter((file) =>
+      file.endsWith(".csv")
+    );
+
+    files.forEach((file) => {
+      const filePath = join(resultsPath, file);
+      const content = readFileSync(filePath, "utf-8");
+      const lines = content.split("\n").filter((line) => line.trim());
+      state.results[file] = Math.max(0, lines.length - 1); // Subtract header row
+    });
   }
 
-  const fileContent = readFileSync(filePath, "utf-8");
-  res.json({ state: JSON.parse(fileContent) });
+  // Get count of items in tweets JSON file
+  if (existsSync(tweetsPath)) {
+    const tweetsContent = readFileSync(tweetsPath, "utf-8");
+    try {
+      const tweets = JSON.parse(tweetsContent);
+      state.tweets = tweets.length;
+    } catch (err) {
+      console.error("Error parsing tweets JSON:", err);
+      state.tweets = 0;
+    }
+  }
+
+  res.json({ state });
 });
 
 // Method: Trigger data indexing

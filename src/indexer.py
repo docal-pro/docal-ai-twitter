@@ -5,6 +5,7 @@ import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from utils.utils import connect_to_database, add_to_database, add_to_score
 
 # Load environment variables
 load_dotenv()
@@ -63,7 +64,7 @@ async def get_tweets(username: str, flag: str = "none"):
             return []
 
         if not tweets_data:
-            print(f"❌ No tweets found for @{username}")
+            print(f"ℹ️  No tweets found for @{username}")
             return []
         
         return tweets_data
@@ -79,8 +80,8 @@ def check_existing_tweets(username: str, age_limit_hours: int) -> bool:
     if not tweets_dir.exists():
         return False
 
-    user_dir = f"tweets/{username}"
-    tweet_file = f"{user_dir}/tweets.json"
+    user_dir = Path(f"tweets/{username}")
+    tweet_file = user_dir / "tweets.json"
 
     if tweet_file.exists():
         # Check file modification time
@@ -97,12 +98,13 @@ def check_existing_tweets(username: str, age_limit_hours: int) -> bool:
 
 
 async def main():
-    if len(sys.argv) != 3:
-        print("ℹ️  Usage: python indexer.py <username> <flag>")
+    if len(sys.argv) != 4:
+        print("ℹ️  Usage: python indexer.py <username> <flag> <contexts>")
         sys.exit(1)
 
     username = sys.argv[1]
     flag = sys.argv[2]
+    ctxs = sys.argv[3].split(",")
 
     # Check if tweets exist and are fresh
     if check_existing_tweets(username, DATA_AGE_LIMIT):
@@ -112,20 +114,29 @@ async def main():
     tweets_data = await get_tweets(username, flag)
     
     if not tweets_data:
-        print(f"❌ No tweets found for @{username}")
-        sys.exit(1)
+        print(f"ℹ️  No tweets found for @{username}")
+        # Add to score
+        add_to_score(username, 0, 0, 0, 0, ctxs)
+    else:
+        # Create directory
+        output_dir = f"tweets/{username}"
+        os.makedirs(output_dir, exist_ok=True)
 
-    # Create directory
-    output_dir = f"tweets/{username}"
-    os.makedirs(output_dir, exist_ok=True)
+        output_file = f"{output_dir}/tweets.json"
 
-    output_file = f"{output_dir}/tweets.json"
+        # Save tweets to file
+        with open(output_file, 'w') as f:
+            json.dump(tweets_data, f, indent=2)
 
-    # Save tweets to file
-    with open(output_file, 'w') as f:
-        json.dump(tweets_data, f, indent=2)
+        print(f"✅ Tweets saved to {output_file}")
 
-    print(f"✅ Tweets saved to {output_file}")
+        # Add to database
+        for tweet in tweets_data:
+            add_to_database(tweet)
+        
+        # Add to score
+        add_to_score(username, len(tweets_data), 0, 0, 1, ctxs)
+            
 
 
 if __name__ == "__main__":
