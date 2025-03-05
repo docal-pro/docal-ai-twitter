@@ -69,7 +69,7 @@ def add_to_score(username: str, tweet_count: int, score: float, trust: float, in
                     scorer([score, tweet_count], [user_exists[2], user_exists[1]]), 
                     trust + user_exists[3], 
                     investigate, 
-                    list(set(contexts + user_exists[5])),
+                    list(set(contexts if contexts != ["null"] else [] + user_exists[5])),
                     datetime.now(), 
                     username
                 )
