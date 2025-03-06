@@ -14,11 +14,10 @@ import { checkDatabase, createDatabase, getAdminClient } from "./database.js";
 import { fakeUsers } from "./utils.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import cors from "cors";
 
 dotenv.config();
 const { get } = axios;
-const app = express();
-app.use(json());
 
 // Add these lines near the top of the file after imports
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +26,27 @@ const __dirname = dirname(__filename);
 // Twitter/X API Bearer Token
 const TWITTER_BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
 const DATA_AGE_LIMIT = process.env.DATA_AGE_LIMIT || 24;
+
+// Add CORS configuration
+const ALLOWED_ORIGINS = [
+  "http://localhost:8080", // Local development
+  "https://proxy.docal.com", // Production domain
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
+
+const app = express();
+app.use(cors(corsOptions)); // Add CORS middleware
+app.use(json());
 
 // Utility function to check if a file exists and is not empty
 const fileExistsAndNotEmpty = (filePath) => {
