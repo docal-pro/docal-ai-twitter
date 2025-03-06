@@ -19,6 +19,7 @@
   "scripts": {
     "init": "python3 -m venv venv && sleep 1 && source venv/bin/activate",
     "pip": "pip install -r requirements.txt",
+    "dev": "node server/local.js",
     "start": "node server/index.js",
     "context": "python3 src/context.py",
     "classify": "python3 src/classifier.py",

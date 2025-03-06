@@ -15,8 +15,6 @@ import { fakeUsers } from "./utils.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import cors from "cors";
-import https from 'https';
-import fs from 'fs';
 
 dotenv.config();
 const { get } = axios;
@@ -50,12 +48,6 @@ const corsOptions = {
 const app = express();
 app.use(cors(corsOptions)); // Add CORS middleware
 app.use(json());
-
-// Use existing certificates
-const httpsOptions = {
-  key: fs.readFileSync('/root/ssl/docal-ai-twitter/private-key.pem'),
-  cert: fs.readFileSync('/root/ssl/docal-ai-twitter/certificate.pem')
-};
 
 // Utility function to check if a file exists and is not empty
 const fileExistsAndNotEmpty = (filePath) => {
@@ -230,19 +222,4 @@ app.get("/ping", (req, res) => {
 });
 
 const PORT = process.env.NODE_PORT || 3031;
-const server = https.createServer(httpsOptions, app);
-
-server.listen(PORT, () => {
-  console.log(`✅ HTTPS Server running on port ${PORT}`);
-});
-
-// Optional: Redirect HTTP to HTTPS
-const httpApp = express();
-httpApp.use((req, res) => {
-  res.redirect(`https://${req.headers.host}${req.url}`);
-});
-
-const HTTP_PORT = process.env.HTTP_PORT || 3030;
-httpApp.listen(HTTP_PORT, () => {
-  console.log(`✅ HTTP redirect server running on port ${HTTP_PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
