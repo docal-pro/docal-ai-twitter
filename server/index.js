@@ -65,6 +65,7 @@ checkDatabase().then(async (exists) => {
 
 // Method: Get all records from the 'twitter_score' table
 app.get("/db", async (req, res) => {
+  console.log("🔎 Fetching data from table...");
   try {
     const client = getAdminClient();
     await client.connect();
@@ -82,9 +83,11 @@ app.get("/db", async (req, res) => {
 
 // Method: Process an investigate request
 app.post("/process", (req, res) => {
+  console.log("🔎 Processing request...");
   const { func, user, data, ctxs } = req.body;
 
   if (!func || !data) {
+    console.log("❌ Missing function or data");
     return res.status(400).json({ error: "Missing function or data" });
   }
 
@@ -128,6 +131,7 @@ app.post("/process", (req, res) => {
 
 // Method: Get the state of an investigation
 app.post("/state", (req, res) => {
+  console.log("🔎 Getting state...");
   const { user } = req.body;
   if (!user) {
     return res.status(400).json({ error: "Missing user" });
@@ -172,6 +176,7 @@ app.post("/state", (req, res) => {
 
 // Method: Trigger data indexing
 app.post("/trigger", async (req, res) => {
+  console.log("🔎 Triggering data indexing...");
   return res.status(502).json({ error: "Method currently unavailable" });
   const { user } = req.body;
   if (!user) {
@@ -207,6 +212,12 @@ app.post("/trigger", async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.response?.data || error.message });
   }
+});
+
+// Ping endpoint
+app.get("/ping", (req, res) => {
+  console.log("🔎 Pinging server...");
+  res.json({ success: true, message: "✅ Server is running" });
 });
 
 const PORT = process.env.NODE_PORT || 3031;
