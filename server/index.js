@@ -231,7 +231,7 @@ app.get("/ping", (req, res) => {
   res.json({ success: true, message: "✅ Server is running" });
 });
 
-const PORT = process.env.NODE_PORT || 3031;
+const PORT = process.env.NODE_PORT || 3035;
 const server = https.createServer(httpsOptions, app);
 
 server.listen(PORT, () => {
@@ -244,7 +244,7 @@ httpApp.use((req, res) => {
   res.redirect(`https://${req.headers.host}${req.url}`);
 });
 
-const HTTP_PORT = process.env.HTTP_PORT || 3030;
+const HTTP_PORT = process.env.HTTP_PORT || 3034;
 httpApp.listen(HTTP_PORT, () => {
   console.log(`✅ HTTP redirect server running on port ${HTTP_PORT}`);
 });
