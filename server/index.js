@@ -15,8 +15,8 @@ import { fakeUsers } from "./utils.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import cors from "cors";
-import https from 'https';
-import fs from 'fs';
+import https from "https";
+import fs from "fs";
 
 dotenv.config();
 const { get } = axios;
@@ -56,7 +56,9 @@ const httpsOptions = {
   key: fs.readFileSync("/etc/letsencrypt/live/store.docal.pro/privkey.pem"),
   cert: fs.readFileSync("/etc/letsencrypt/live/store.docal.pro/cert.pem"),
   ca: fs.readFileSync("/etc/letsencrypt/live/store.docal.pro/chain.pem"),
-  fullChain: fs.readFileSync("/etc/letsencrypt/live/store.docal.pro/fullchain.pem"),
+  fullChain: fs.readFileSync(
+    "/etc/letsencrypt/live/store.docal.pro/fullchain.pem"
+  ),
 };
 
 // Utility function to check if a file exists and is not empty
@@ -241,7 +243,7 @@ server.listen(PORT, () => {
 // Optional: Redirect HTTP to HTTPS
 const httpApp = express();
 httpApp.use((req, res) => {
-  res.redirect(`https://${req.headers.hostname}:${PORT}${req.url}`);
+  res.redirect(`https://${req.headers.host.split(":")[0]}:${PORT}${req.url}`);
 });
 
 const HTTP_PORT = process.env.HTTP_PORT || 3034;
