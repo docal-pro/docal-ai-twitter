@@ -221,5 +221,5 @@ app.get("/ping", (req, res) => {
   res.json({ success: true, message: "✅ Server is running" });
 });
 
-const PORT = process.env.NODE_PORT || 3031;
+const PORT = process.env.NODE_PORT || 3035;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
