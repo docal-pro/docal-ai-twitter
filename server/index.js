@@ -53,8 +53,10 @@ app.use(json());
 
 // Use existing certificates
 const httpsOptions = {
-  key: fs.readFileSync('/root/ssl/docal-ai-twitter/private-key.pem'),
-  cert: fs.readFileSync('/root/ssl/docal-ai-twitter/certificate.pem')
+  key: fs.readFileSync("/etc/letsencrypt/live/store.docal.pro/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/store.docal.pro/cert.pem"),
+  ca: fs.readFileSync("/etc/letsencrypt/live/store.docal.pro/chain.pem"),
+  fullChain: fs.readFileSync("/etc/letsencrypt/live/store.docal.pro/fullchain.pem"),
 };
 
 // Utility function to check if a file exists and is not empty
