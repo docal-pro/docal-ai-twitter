@@ -241,7 +241,7 @@ server.listen(PORT, () => {
 // Optional: Redirect HTTP to HTTPS
 const httpApp = express();
 httpApp.use((req, res) => {
-  res.redirect(`https://${req.headers.host}${req.url}`);
+  res.redirect(`https://${req.headers.hostname}:${PORT}${req.url}`);
 });
 
 const HTTP_PORT = process.env.HTTP_PORT || 3034;
