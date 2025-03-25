@@ -25,6 +25,22 @@ def connect_to_database():
     cursor = connection.cursor()
     return connection, cursor
 
+def add_to_schedule(schedule_data: dict):
+    """Add schedule data to the database"""
+    try:
+        connection, cursor = connect_to_database()
+
+        # Insert tweet data into database
+        cursor.execute(
+            "INSERT INTO schedule (user, transaction, tweet_ids, timestamp) VALUES (%s, %s, %s, %s)",
+            (schedule_data['user'], schedule_data['transaction'], schedule_data['tweets'], datetime.now())
+        )
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print(f"✅ Schedule for {schedule_data['user']} added to database")
+    except Exception as e:
+        print(f"❌ Error adding schedule to database: {e}")
 
 def add_to_database(tweet_data: dict):
     """Add tweet data to the database"""
@@ -94,4 +110,4 @@ def add_to_score(username: str, tweet_count: int, score: float, trust: float, in
 
 
 if __name__ != "__main__":
-    __all__ = ['scorer']
+    __all__ = ['scorer', 'add_to_database', 'add_to_schedule', 'add_to_score']

@@ -6,7 +6,7 @@ import asyncio
 import psycopg2
 from pathlib import Path
 from dotenv import load_dotenv
-from utils.utils import connect_to_database, add_to_database, add_to_score
+from utils.utils import connect_to_database, add_to_database, add_to_score, add_to_schedule
 
 # Load environment variables
 load_dotenv()
@@ -131,7 +131,7 @@ async def main():
     tweets_data = await get_tweets(tweet_ids, flag)
     
     if not tweets_data:
-        print(f"❌ No tweets found")
+        print(f"❌ Failed to fetch tweets")
         sys.exit(0)
     
     for tweet_data in tweets_data:

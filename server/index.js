@@ -7,13 +7,12 @@ import {
   writeFileSync,
 } from "fs";
 import { exec } from "child_process";
-import { join } from "path";
+import { join, dirname } from "path";
 import axios from "axios";
 import dotenv from "dotenv";
 import { checkDatabase, createDatabase, getAdminClient } from "./database.js";
-import { fakeUsers } from "./utils.js";
+import { fakeUsers, fakeSchedule } from "./utils.js";
 import { fileURLToPath } from "url";
-import { dirname } from "path";
 import cors from "cors";
 import https from "https";
 import fs from "fs";
@@ -75,6 +74,37 @@ checkDatabase().then(async (exists) => {
   }
 });
 
+// Ping endpoint
+app.get("/ping", (req, res) => {
+  console.log("🔎 Pinging server...");
+  res.json({ success: true, message: "✅ Server is running" });
+});
+
+// Method: Get schedule for a user from the 'schedule' table
+app.get("/schedule", async (req, res) => {
+  console.log("🔎 Fetching schedule from table...");
+  const { query } = req.body;
+  if (!query) {
+    return res.status(400).json({ error: "Missing query" });
+  }
+  try {
+    const client = getAdminClient();
+    await client.connect();
+    const result = await client.query(
+      "SELECT * FROM schedule WHERE user = $1",
+      [query]
+    );
+    await client.end();
+    res.json({
+      columns: result.fields.map((field) => field.name),
+      rows: result.rows.length > 0 ? result.rows : fakeSchedule,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching data from 'schedule' table:", error);
+    res.status(500).json({ error: "An error occurred while fetching schedule" });
+  }
+});
+
 // Method: Get all records from the 'twitter_score' table
 app.get("/db", async (req, res) => {
   console.log("🔎 Fetching data from table...");
@@ -93,56 +123,8 @@ app.get("/db", async (req, res) => {
   }
 });
 
-// Method: Process an investigate request
-app.post("/process", (req, res) => {
-  console.log("🔎 Processing request...");
-  const { func, user, data, ctxs } = req.body;
-
-  if (!func || !data) {
-    console.log("❌ Missing function or data");
-    return res.status(400).json({ error: "Missing function or data" });
-  }
-
-  let filePath;
-  let tweetIds;
-  let username;
-  if (func !== "scraper" && func !== "indexer") {
-    username = data;
-    filePath = join(__dirname, `results/${username}/${func}.csv`);
-  } else if (func === "indexer") {
-    username = data;
-    filePath = join(__dirname, `tweets/${username}/tweets.json`);
-  } else if (func === "scraper") {
-    filePath = join(__dirname, `tweets/${user}/tweets.json`);
-    tweetIds = data;
-  }
-
-  if (func !== "scraper" && !fileExistsAndNotEmpty(filePath)) {
-    try {
-      unlinkSync(filePath); // Delete empty file if exists
-    } catch (err) {}
-  }
-
-  let flag = "false";
-  const command =
-    func !== "scraper"
-      ? func !== "indexer"
-        ? func === "classifier"
-          ? `python3 src/${func}.py ${username} "${ctxs}"` // Classifier: needs contexts
-          : `python3 src/${func}.py ${username}` // Other functions: don't need contexts or flags
-        : `python3 src/${func}.py ${username} ${flag} "${ctxs}"` // Indexer: needs flag and contexts
-      : `python3 src/${func}.py ${tweetIds} ${user} ${flag} "${ctxs}"`; // Scraper: needs flag and contexts
-  exec(command, (error, stdout, stderr) => {
-    if (error) {
-      console.log(error);
-      return res.status(500).json({ error: stderr || error.message });
-    }
-    res.json({ result: stdout.trim() });
-  });
-});
-
 // Method: Get the state of an investigation
-app.post("/state", (req, res) => {
+app.get("/state", (req, res) => {
   console.log("🔎 Getting state...");
   const { user } = req.body;
   if (!user) {
@@ -186,6 +168,54 @@ app.post("/state", (req, res) => {
   res.json({ state });
 });
 
+// Method: Process an investigate request
+app.post("/process", (req, res) => {
+  console.log("🔎 Processing request...");
+  const { func, user, data, ctxs } = req.body;
+
+  if (!func || !data) {
+    console.log("❌ Missing function or data");
+    return res.status(400).json({ error: "Missing function or data" });
+  }
+
+  let filePath;
+  let tweetIds;
+  let username;
+  if (func !== "scraper" && func !== "indexer") {
+    username = data;
+    filePath = join(__dirname, `results/${username}/${func}.csv`);
+  } else if (func === "indexer") {
+    username = data;
+    filePath = join(__dirname, `tweets/${username}/tweets.json`);
+  } else if (func === "scraper") {
+    filePath = join(__dirname, `tweets/${user}/tweets.json`);
+    tweetIds = data;
+  }
+
+  if (func !== "scraper" && !fileExistsAndNotEmpty(filePath)) {
+    try {
+      unlinkSync(filePath); // Delete empty file if exists
+    } catch (err) { }
+  }
+
+  let flag = "false";
+  const command =
+    func !== "scraper"
+      ? func !== "indexer"
+        ? func === "classifier"
+          ? `python3 src/${func}.py ${username} "${ctxs}"` // Classifier: needs contexts
+          : `python3 src/${func}.py ${username}` // Other functions: don't need contexts or flags
+        : `python3 src/${func}.py ${username} ${flag} "${ctxs}"` // Indexer: needs flag and contexts
+      : `python3 src/${func}.py ${tweetIds} ${user} ${flag} "${ctxs}"`; // Scraper: needs flag and contexts
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      console.log(error);
+      return res.status(500).json({ error: stderr || error.message });
+    }
+    res.json({ result: stdout.trim() });
+  });
+});
+
 // Method: Trigger data indexing
 app.post("/trigger", async (req, res) => {
   console.log("🔎 Triggering data indexing...");
@@ -226,12 +256,6 @@ app.post("/trigger", async (req, res) => {
   }
 });
 
-// Ping endpoint
-app.get("/ping", (req, res) => {
-  console.log("🔎 Pinging server...");
-  res.json({ success: true, message: "✅ Server is running" });
-});
-
 const PORT = process.env.NODE_PORT || 3035;
 const server = https.createServer(httpsOptions, app);
 
@@ -245,7 +269,7 @@ httpApp.use((req, res) => {
   res.redirect(`https://${req.headers.host.split(":")[0]}:${PORT}${req.url}`);
 });
 
-const HTTP_PORT = process.env.HTTP_PORT || 3034;
+const HTTP_PORT = process.env.HTTP_PORT || 3135;
 httpApp.listen(HTTP_PORT, () => {
-  console.log(`✅ HTTP redirect server running on port ${HTTP_PORT}`);
+  console.log(`✅ HTTP Redirect Server running on port ${HTTP_PORT}`);
 });
