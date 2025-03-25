@@ -175,7 +175,7 @@ app.post("/process", (req, res) => {
     username = data;
     filePath = join(__dirname, `results/${username}/${func}.csv`);
   } else if (func === "indexer") {
-    username = data;
+    username = user;
     filePath = join(__dirname, `tweets/${username}/tweets.json`);
   } else if (func === "scraper") {
     filePath = join(__dirname, `tweets/${user}/tweets.json`);
@@ -195,8 +195,8 @@ app.post("/process", (req, res) => {
         ? func === "classifier"
           ? `python3 src/${func}.py ${username} "${ctxs}"` // Classifier: needs contexts
           : `python3 src/${func}.py ${username}` // Other functions: don't need contexts or flags
-        : `python3 src/${func}.py ${username} ${flag} "${ctxs}"` // Indexer: needs flag and contexts
-      : `python3 src/${func}.py ${tweetIds} ${user} ${flag} "${ctxs}" ${caller} ${transaction}`; // Scraper: needs flag and contexts
+        : `python3 src/${func}.py ${username} ${flag} "${ctxs}" ${caller} ${transaction}` // Indexer: needs flag and contexts
+      : `python3 src/${func}.py ${tweetIds} ${flag} "${ctxs}" ${caller} ${transaction}`; // Scraper: needs flag and contexts
   exec(command, (error, stdout, stderr) => {
     if (error) {
       console.log(error);

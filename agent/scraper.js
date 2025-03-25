@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import { Scraper } from "agent-twitter-client";
 import { Cookie } from "tough-cookie";
+import path from "path";
 
 dotenv.config();
 
@@ -125,6 +126,11 @@ async function main() {
       }
 
       console.log("ℹ️  Backing up cookies...");
+      // Ensure the logs directory exists
+      const logsDir = path.dirname(cookiesFile);
+      if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true });
+      }
       await scraper.getCookies().then((cookies) => {
         fs.writeFileSync(cookiesFile, JSON.stringify(cookies));
       });

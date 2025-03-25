@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import { Scraper } from "agent-twitter-client";
 import { Cookie } from "tough-cookie";
+import path from "path";
 
 dotenv.config();
 
@@ -59,31 +60,56 @@ async function main() {
       let cookies = [];
       if (fs.existsSync(cookiesFile)) {
         cookies = loadCookies(cookiesFile);
-      } else {
-        console.log("ℹ️  No cookies found, logging in...");
       }
-      // Get forceLoginWithCookies from command line arguments
-      const forceLoginWithCookies = process.argv[3];
 
-      if (forceLoginWithCookies === "true") {
-        // Load keys from cookies
-        let authToken, ct0, guestId;
-        if (cookies.length > 0) {
-          authToken = cookies.find((c) => c.name === "auth_token");
-          ct0 = cookies.find((c) => c.name === "ct0");
-          guestId = cookies.find((c) => c.name === "guest_id");
-        }
+      // Check for forceLoginWithCookies flag
+      const forceLoginWithCookies = process.argv[3];
+      if (forceLoginWithCookies === "strict") {
+        console.log("ℹ️  Loading cookies from .env...");
         await scraper.login(
           TWITTER_USERNAME,
           TWITTER_PASSWORD,
           TWITTER_EMAIL,
           TWITTER_2FA_SECRET,
-          TWITTER_COOKIES_AUTH_TOKEN || authToken,
-          TWITTER_COOKIES_CT0 || ct0,
-          TWITTER_COOKIES_GUEST_ID || guestId
+          TWITTER_COOKIES_AUTH_TOKEN,
+          TWITTER_COOKIES_CT0,
+          TWITTER_COOKIES_GUEST_ID
         );
+      } else if (forceLoginWithCookies === "true") {
+        if (cookies.length > 0) {
+          console.log("ℹ️  Cookies found, logging in with cookies...");
+          const authToken = cookies.find((c) => c.name === "auth_token");
+          const ct0 = cookies.find((c) => c.name === "ct0");
+          const guestId = cookies.find((c) => c.name === "guest_id");
+          console.log("⦿ AUTH_TOKEN =", authToken);
+          console.log("⦿ CT0 =", ct0);
+          console.log("⦿ GUEST_ID =", guestId);
+          await scraper.setCookies(cookies);
+          await scraper.login(
+            TWITTER_USERNAME,
+            TWITTER_PASSWORD,
+            TWITTER_EMAIL,
+            TWITTER_2FA_SECRET
+          );
+        } else {
+          console.log("ℹ️  No cookies found, using values from .env...");
+          await scraper.login(
+            TWITTER_USERNAME,
+            TWITTER_PASSWORD,
+            TWITTER_EMAIL,
+            TWITTER_2FA_SECRET,
+            TWITTER_COOKIES_AUTH_TOKEN,
+            TWITTER_COOKIES_CT0,
+            TWITTER_COOKIES_GUEST_ID
+          );
+        }
       } else if (forceLoginWithCookies === "false") {
-        if (cookies.length > 0) await scraper.setCookies(cookies);
+        if (cookies.length > 0) {
+          console.log("ℹ️  Cookies found, logging in with cookies...");
+          await scraper.setCookies(cookies);
+        } else {
+          console.log("ℹ️  No cookies found, attempting fresh login...");
+        }
         await scraper.login(
           TWITTER_USERNAME,
           TWITTER_PASSWORD,
@@ -91,6 +117,7 @@ async function main() {
           TWITTER_2FA_SECRET
         );
       } else {
+        console.log("ℹ️  Cookies not requested, attempting fresh login...");
         await scraper.login(
           TWITTER_USERNAME,
           TWITTER_PASSWORD,
@@ -99,6 +126,12 @@ async function main() {
         );
       }
 
+      console.log("ℹ️  Backing up cookies...");
+      // Ensure the logs directory exists
+      const logsDir = path.dirname(cookiesFile);
+      if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true });
+      }
       await scraper.getCookies().then((cookies) => {
         fs.writeFileSync(cookiesFile, JSON.stringify(cookies));
       });
@@ -108,7 +141,7 @@ async function main() {
         await scraper.setCookies(loadCookies(cookiesFile));
         console.log("✅ Already logged in");
       } else {
-        console.log("❌ Logged in but no cookies found");
+        console.log("⚠️  Logged in but no cookies found");
       }
     }
 

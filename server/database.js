@@ -18,8 +18,8 @@ function getInitClient() {
 }
 
 /**
- * Creates a new PostgreSQL client without connecting to a specific database.
- * Used for checking and creating databases.
+ * Creates a new PostgreSQL client which connects to a specific database.
+ * Used for checking and creating tables.
  */
 export function getAdminClient() {
   return new Client({

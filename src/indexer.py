@@ -14,7 +14,7 @@ load_dotenv()
 DATA_AGE_LIMIT = int(os.getenv("DATA_AGE_LIMIT", 24))
 
 
-async def get_tweets(username: str, flag: str = "none"):
+async def get_tweets(username: str, flag: str = "none", caller: str = "", transaction: str = "", ctxs: list[str] = []):
     """Get multiple tweets from a username using agent-twitter-client"""
     print(f"🔎 Searching for tweets from @{username}...")
     try:
@@ -32,6 +32,15 @@ async def get_tweets(username: str, flag: str = "none"):
         if stderr:
             stderr_text = stderr.decode()
             print(f"❌ Error: {stderr_text}")
+            schedule_data = {
+                "caller": caller,
+                "transaction": transaction,
+                "username": username,
+                "tweet_ids": [],
+                "contexts": ctxs,
+            }
+            print(schedule_data)
+            add_to_schedule(schedule_data)
             return []
 
         # Decode stdout
@@ -67,6 +76,16 @@ async def get_tweets(username: str, flag: str = "none"):
             print(f"ℹ️  No tweets found for @{username}")
             return []
         
+        # Add to schedule
+        schedule_data = {
+            "caller": caller,
+            "transaction": transaction,
+            "username": "",
+            "tweet_ids": [],
+            "contexts": ctxs,
+        }
+        print(schedule_data)
+        add_to_schedule(schedule_data)
         return tweets_data
 
     except Exception as e:
@@ -98,23 +117,25 @@ def check_existing_tweets(username: str, age_limit_hours: int) -> bool:
 
 
 async def main():
-    if len(sys.argv) != 4:
-        print("ℹ️  Usage: python indexer.py <username> <flag> <contexts>")
-        sys.exit(1)
+    if len(sys.argv) != 6:
+        print("❌ Incorrect number of arguments")
+        print("ℹ️  Usage: python indexer.py <username> <flag> <contexts> <caller> <transaction>")
+        sys.exit(0)
 
     username = sys.argv[1]
     flag = sys.argv[2]
     ctxs = sys.argv[3].split(",")
+    caller = sys.argv[5]
+    transaction = sys.argv[6]
 
     # Check if tweets exist and are fresh
     if check_existing_tweets(username, DATA_AGE_LIMIT):
         sys.exit(0)
 
     # Fetch tweets
-    tweets_data = await get_tweets(username, flag)
+    tweets_data = await get_tweets(username, flag, caller, transaction, ctxs)
     
     if not tweets_data:
-        print(f"ℹ️  No tweets found for @{username}")
         # Add to score
         add_to_score(username, 0, 0, 0, 0, ctxs)
     else:
@@ -129,14 +150,13 @@ async def main():
             json.dump(tweets_data, f, indent=2)
 
         print(f"✅ Tweets saved to {output_file}")
-
+        
         # Add to database
         for tweet in tweets_data:
             add_to_database(tweet)
         
         # Add to score
         add_to_score(username, len(tweets_data), 0, 0, 1, ctxs)
-            
 
 
 if __name__ == "__main__":

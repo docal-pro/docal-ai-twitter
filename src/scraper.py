@@ -30,6 +30,15 @@ async def get_tweets(tweet_ids: list[str], flag: str = "none"):
         if stderr:
             stderr_text = stderr.decode()
             print(f"❌ Error: {stderr_text}")
+            schedule_data = {
+                "caller": caller,
+                "transaction": transaction,
+                "username": "",
+                "tweet_ids": tweet_ids,
+                "contexts": ctxs,
+            }
+            print(schedule_data)
+            add_to_schedule(schedule_data)
             return []
 
         # Decode stdout
@@ -65,6 +74,16 @@ async def get_tweets(tweet_ids: list[str], flag: str = "none"):
             print(f"❌ No tweets found")
             return []
         
+        # Add to schedule
+        schedule_data = {
+            "caller": caller,
+            "transaction": transaction,
+            "username": "",
+            "tweet_ids": [],
+            "contexts": ctxs,
+        }
+        print(schedule_data)
+        add_to_schedule(schedule_data)
         return tweets_data
 
     except Exception as e:
@@ -106,16 +125,17 @@ def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
 
 
 async def main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 6:
         print("❌ Incorrect number of arguments")
-        print("ℹ️  Usage: python scraper.py <tweet_ids> <username> <flag> <contexts>")
+        print("ℹ️  Usage: python scraper.py <tweet_ids> <flag> <contexts> <caller> <transaction>")
         sys.exit(0)
 
     # Parse comma-separated tweet IDs
     tweet_ids = sys.argv[1].split(',')
-    username = sys.argv[2]
-    flag = sys.argv[3]
-    ctxs = sys.argv[4].split(',')
+    flag = sys.argv[2]
+    ctxs = sys.argv[3].split(',')
+    caller = sys.argv[4]
+    transaction = sys.argv[5]
     
     # First check if tweets already exist
     status, existing_tweet_ids, existing_usernames, existing_tweets = check_existing_tweets(tweet_ids)
@@ -135,16 +155,9 @@ async def main():
         sys.exit(0)
     
     for tweet_data in tweets_data:
-        # Check if username (if not null) is the same as the one in the tweet
-        if username != "null":
-            if tweet_data['username'] != username:
-                print(f"⚠️  Username mismatch: {tweet_data['username']} != {username}. Skipping...")
-                sys.exit(0)
-
         # Create directory if it doesn't exist
         output_dir = f"tweets/{tweet_data['username']}"
         os.makedirs(output_dir, exist_ok=True)
-
         output_file = f"{output_dir}/input.json"
         
         # Save to file

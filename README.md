@@ -129,8 +129,9 @@ npm run scrape $tweetId $flag
 npm run index $user $flag
 ```
 
-| Option         | Description                     | `flag`  |
-| -------------- | ------------------------------- | ------- |
-| Forced cookies | Use cookies from `.env` file    | `true`  |
-| Cached cookies | Use previously cached cookies   | `false` |
-| Fresh login    | Login without using any cookies | `none`  |
+| Option         | Description                                     | `flag`    |
+| -------------- | ----------------------------------------------- | --------- |
+| Strict cookies | Strictly load cookies from `.env` file          | `strict`  |
+| Forced cookies | Use cached cookies, or load from `.env` file    | `true`    |
+| Cached cookies | Use cached cookies, or login without cookies    | `false`   |
+| Fresh login    | Login without cookies                           | `none`    |
