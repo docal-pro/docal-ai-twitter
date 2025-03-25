@@ -35,7 +35,7 @@ export function getAdminClient() {
  * @returns {Promise<boolean>} True if DB exists, false otherwise.
  */
 export async function checkDatabase() {
-  const client = getInitClient();
+  const client = getAdminClient();
 
   try {
     await client.connect();
@@ -111,9 +111,11 @@ export async function createDatabase() {
     // Create the 'schedule' table
     const createScheduleTableQuery = `
       CREATE TABLE IF NOT EXISTS schedule (
-        user VARCHAR(48) PRIMARY KEY,
+        caller VARCHAR(48) PRIMARY KEY,
+        username VARCHAR(16) NOT NULL,
         transaction VARCHAR(96) NOT NULL,
-        tweet_ids TEXT NOT NULL,
+        contexts TEXT[] NOT NULL,
+        tweet_ids TEXT[] NOT NULL,
         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `;

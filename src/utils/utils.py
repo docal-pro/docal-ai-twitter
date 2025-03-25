@@ -32,13 +32,13 @@ def add_to_schedule(schedule_data: dict):
 
         # Insert tweet data into database
         cursor.execute(
-            "INSERT INTO schedule (user, transaction, tweet_ids, timestamp) VALUES (%s, %s, %s, %s)",
-            (schedule_data['user'], schedule_data['transaction'], schedule_data['tweets'], datetime.now())
+            "INSERT INTO schedule (caller, username, transaction, contexts, tweet_ids, timestamp) VALUES (%s, %s, %s, %s, %s, %s)",
+            (schedule_data['caller'], schedule_data['username'], schedule_data['transaction'], schedule_data['contexts'], schedule_data['tweet_ids'], datetime.now())
         )
         connection.commit()
         cursor.close()
         connection.close()
-        print(f"✅ Schedule for {schedule_data['user']} added to database")
+        print(f"✅ Schedule for {schedule_data['username']} added to database")
     except Exception as e:
         print(f"❌ Error adding schedule to database: {e}")
 

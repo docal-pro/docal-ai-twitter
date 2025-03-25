@@ -11,7 +11,7 @@ import { join } from "path";
 import axios from "axios";
 import dotenv from "dotenv";
 import { checkDatabase, createDatabase, getAdminClient } from "./database.js";
-import { fakeUsers, fakeSchedule } from "./utils.js";
+import { defaultUsers, defaultSchedule } from "./utils.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import cors from "cors";
@@ -35,8 +35,8 @@ const ALLOWED_ORIGINS = [
 
 const corsOptions = {
   origin: function (origin, callback) {
+    console.log("🔎 CORS origin:", origin || "Same-Origin-Request");
     if (!origin || ALLOWED_ORIGINS.indexOf(origin) !== -1) {
-      console.log("🔎 CORS origin:", origin);
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -60,7 +60,7 @@ checkDatabase().then(async (exists) => {
     console.log("ℹ️  Creating database...");
     await createDatabase();
   } else {
-    console.log("✅ Database already exists");
+    console.log("✅ Database and tables already exist");
   }
 });
 
@@ -81,13 +81,13 @@ app.get("/schedule", async (req, res) => {
     const client = getAdminClient();
     await client.connect();
     const result = await client.query(
-      "SELECT * FROM schedule WHERE user = $1",
+      "SELECT * FROM schedule WHERE caller = $1",
       [query]
     );
     await client.end();
     res.json({
       columns: result.fields.map((field) => field.name),
-      rows: result.rows.length > 0 ? result.rows : fakeSchedule,
+      rows: result.rows.length > 0 ? result.rows : defaultSchedule,
     });
   } catch (error) {
     console.error("❌ Error fetching data from 'schedule' table:", error);
@@ -105,7 +105,7 @@ app.get("/db", async (req, res) => {
     await client.end();
     res.json({
       columns: result.fields.map((field) => field.name),
-      rows: result.rows.length > 0 ? result.rows : fakeUsers,
+      rows: result.rows.length > 0 ? result.rows : defaultUsers,
     });
   } catch (error) {
     console.error("❌ Error fetching data from 'twitter_score' table:", error);
@@ -161,7 +161,7 @@ app.get("/state", (req, res) => {
 // Method: Process an investigate request
 app.post("/process", (req, res) => {
   console.log("🔎 Processing request...");
-  const { func, user, data, ctxs } = req.body;
+  const { func, user, data, ctxs, caller, transaction } = req.body;
 
   if (!func || !data) {
     console.log("❌ Missing function or data");
@@ -196,7 +196,7 @@ app.post("/process", (req, res) => {
           ? `python3 src/${func}.py ${username} "${ctxs}"` // Classifier: needs contexts
           : `python3 src/${func}.py ${username}` // Other functions: don't need contexts or flags
         : `python3 src/${func}.py ${username} ${flag} "${ctxs}"` // Indexer: needs flag and contexts
-      : `python3 src/${func}.py ${tweetIds} ${user} ${flag} "${ctxs}"`; // Scraper: needs flag and contexts
+      : `python3 src/${func}.py ${tweetIds} ${user} ${flag} "${ctxs}" ${caller} ${transaction}`; // Scraper: needs flag and contexts
   exec(command, (error, stdout, stderr) => {
     if (error) {
       console.log(error);
