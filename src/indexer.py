@@ -5,7 +5,7 @@ import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from utils.utils import connect_to_database, add_to_database, add_to_score
+from utils.utils import connect_to_database, add_to_database, add_to_score, add_to_schedule
 
 # Load environment variables
 load_dotenv()
