@@ -12,7 +12,7 @@ from utils.utils import connect_to_database, add_to_database, add_to_score, add_
 load_dotenv()
 
 
-async def get_tweets(tweet_ids: list[str], flag: str = "none"):
+async def get_tweets(tweet_ids: list[str], flag: str = "none", caller: str = "", transaction: str = "", ctxs: list[str] = []):
     """Get tweet data using agent-twitter-client"""
     print(f"🔎 Searching for tweets...")
     try:
@@ -37,7 +37,6 @@ async def get_tweets(tweet_ids: list[str], flag: str = "none"):
                 "tweet_ids": tweet_ids,
                 "contexts": ctxs,
             }
-            print(schedule_data)
             add_to_schedule(schedule_data)
             return []
 
@@ -82,7 +81,6 @@ async def get_tweets(tweet_ids: list[str], flag: str = "none"):
             "tweet_ids": [],
             "contexts": ctxs,
         }
-        print(schedule_data)
         add_to_schedule(schedule_data)
         return tweets_data
 
@@ -125,17 +123,18 @@ def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
 
 
 async def main():
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 7:
         print("❌ Incorrect number of arguments")
-        print("ℹ️  Usage: python scraper.py <tweet_ids> <flag> <contexts> <caller> <transaction>")
+        print("ℹ️  Usage: python scraper.py <username> <tweet_ids> <flag> <contexts> <caller> <transaction>")
         sys.exit(0)
 
     # Parse comma-separated tweet IDs
-    tweet_ids = sys.argv[1].split(',')
-    flag = sys.argv[2]
-    ctxs = sys.argv[3].split(',')
-    caller = sys.argv[4]
-    transaction = sys.argv[5]
+    username = sys.argv[1]
+    tweet_ids = sys.argv[2].split(',')
+    flag = sys.argv[3]
+    ctxs = sys.argv[4].split(',')
+    caller = sys.argv[5]
+    transaction = sys.argv[6]
     
     # First check if tweets already exist
     status, existing_tweet_ids, existing_usernames, existing_tweets = check_existing_tweets(tweet_ids)
@@ -143,18 +142,26 @@ async def main():
     # Filter out tweets that don't exist
     tweet_ids = [tweet_id for tweet_id in tweet_ids if tweet_id not in existing_tweet_ids]
 
+    # Filter out null contexts
+    ctxs = [ctx for ctx in ctxs if ctx != "null"]
+
     if not tweet_ids:
         print(f"✅ Tweets already exist")
         sys.exit(0)
 
     # If not found, proceed with fetching the tweet
-    tweets_data = await get_tweets(tweet_ids, flag)
+    tweets_data = await get_tweets(tweet_ids, flag, caller, transaction, ctxs)
     
     if not tweets_data:
         print(f"❌ Failed to fetch tweets")
         sys.exit(0)
     
     for tweet_data in tweets_data:
+        if username != "null":
+            if tweet_data['username'] != username:
+                print(f"⚠️  Username mismatch: {tweet_data['username']} != {username}")
+                continue
+
         # Create directory if it doesn't exist
         output_dir = f"tweets/{tweet_data['username']}"
         os.makedirs(output_dir, exist_ok=True)

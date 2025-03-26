@@ -72,7 +72,7 @@ app.get("/ping", (req, res) => {
 
 // Method: Get schedule for a user from the 'schedule' table
 app.get("/schedule", async (req, res) => {
-  console.log("🔎 Fetching schedule from table...");
+  console.log("🔎 Fetching schedule from table for request:\n", req.body);
   const { query } = req.body;
   if (!query) {
     return res.status(400).json({ error: "Missing query" });
@@ -97,7 +97,7 @@ app.get("/schedule", async (req, res) => {
 
 // Method: Get all records from the 'twitter_score' table
 app.get("/db", async (req, res) => {
-  console.log("🔎 Fetching data from table...");
+  console.log("🔎 Fetching data from table for request:\n", req.body);
   try {
     const client = getAdminClient();
     await client.connect();
@@ -115,7 +115,7 @@ app.get("/db", async (req, res) => {
 
 // Method: Get the state of an investigation
 app.get("/state", (req, res) => {
-  console.log("🔎 Getting state...");
+  console.log("🔎 Getting state for request:\n", req.body);
   const { user } = req.body;
   if (!user) {
     return res.status(400).json({ error: "Missing user" });
@@ -160,7 +160,7 @@ app.get("/state", (req, res) => {
 
 // Method: Process an investigate request
 app.post("/process", (req, res) => {
-  console.log("🔎 Processing request...");
+  console.log("🔎 Processing request:\n", req.body);
   const { func, user, data, ctxs, caller, transaction } = req.body;
 
   if (!func || !data) {
@@ -171,6 +171,7 @@ app.post("/process", (req, res) => {
   let filePath;
   let tweetIds;
   let username;
+
   if (func !== "scraper" && func !== "indexer") {
     username = data;
     filePath = join(__dirname, `results/${username}/${func}.csv`);
@@ -178,6 +179,7 @@ app.post("/process", (req, res) => {
     username = user;
     filePath = join(__dirname, `tweets/${username}/tweets.json`);
   } else if (func === "scraper") {
+    username = user;
     filePath = join(__dirname, `tweets/${user}/tweets.json`);
     tweetIds = data;
   }
@@ -196,7 +198,7 @@ app.post("/process", (req, res) => {
           ? `python3 src/${func}.py ${username} "${ctxs}"` // Classifier: needs contexts
           : `python3 src/${func}.py ${username}` // Other functions: don't need contexts or flags
         : `python3 src/${func}.py ${username} ${flag} "${ctxs}" ${caller} ${transaction}` // Indexer: needs flag and contexts
-      : `python3 src/${func}.py ${tweetIds} ${flag} "${ctxs}" ${caller} ${transaction}`; // Scraper: needs flag and contexts
+      : `python3 src/${func}.py ${username} ${tweetIds} ${flag} "${ctxs}" ${caller} ${transaction}`; // Scraper: needs flag and contexts
   exec(command, (error, stdout, stderr) => {
     if (error) {
       console.log(error);
@@ -208,7 +210,7 @@ app.post("/process", (req, res) => {
 
 // Method: Trigger data indexing
 app.post("/trigger", async (req, res) => {
-  console.log("🔎 Triggering data indexing...");
+  console.log("🔎 Triggering data indexing for request:\n", req.body);
   return res.status(502).json({ error: "Method currently unavailable" });
   const { user } = req.body;
   if (!user) {
