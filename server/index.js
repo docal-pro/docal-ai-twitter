@@ -81,8 +81,26 @@ app.get("/ping", (req, res) => {
   res.json({ success: true, message: "✅ Server is running" });
 });
 
+// Method: Get all records from the 'twitter_score' table
+app.get("/db", async (req, res) => {
+  console.log("🔎 Fetching data from score table");
+  try {
+    const client = getAdminClient();
+    await client.connect();
+    const result = await client.query("SELECT * FROM twitter_score");
+    await client.end();
+    res.json({
+      columns: result.fields.map((field) => field.name),
+      rows: result.rows.length > 0 ? result.rows : defaultUsers,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching data from 'twitter_score' table:", error);
+    res.status(500).json({ error: "An error occurred while fetching data" });
+  }
+});
+
 // Method: Get schedule for a user from the 'schedule' table
-app.get("/schedule", async (req, res) => {
+app.post("/schedule", async (req, res) => {
   console.log("🔎 Fetching schedule from table for request:\n", req.body);
   const { query } = req.body;
   if (!query) {
@@ -106,26 +124,8 @@ app.get("/schedule", async (req, res) => {
   }
 });
 
-// Method: Get all records from the 'twitter_score' table
-app.get("/db", async (req, res) => {
-  console.log("🔎 Fetching data from table for request:\n", req.body);
-  try {
-    const client = getAdminClient();
-    await client.connect();
-    const result = await client.query("SELECT * FROM twitter_score");
-    await client.end();
-    res.json({
-      columns: result.fields.map((field) => field.name),
-      rows: result.rows.length > 0 ? result.rows : defaultUsers,
-    });
-  } catch (error) {
-    console.error("❌ Error fetching data from 'twitter_score' table:", error);
-    res.status(500).json({ error: "An error occurred while fetching data" });
-  }
-});
-
 // Method: Get the state of an investigation
-app.get("/state", (req, res) => {
+app.post("/state", (req, res) => {
   console.log("🔎 Getting state for request:\n", req.body);
   const { user } = req.body;
   if (!user) {
