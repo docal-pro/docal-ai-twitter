@@ -83,18 +83,13 @@ def add_to_score(username: str, tweet_count: int, score: float, trust: float, in
 
         # Check if user exists
         cursor.execute(
-            f"SELECT * FROM twitter_score WHERE username = '{username}'"
+            f"SELECT * FROM twitter_score WHERE username = %s",
+            (username,)
         )
         user_exists = cursor.fetchone()
 
         if user_exists:
-            # Update existing user
-            # Flatten the lists and remove duplicates
-            combined_contexts = list(set(
-                context for context in (contexts if contexts != ["null"] else []) + (user_exists[5] if user_exists[5] is not None else [])
-            ))
-
-            # Use the flattened list in the Json function
+            # Update existing use
             cursor.execute(
                 """
                 UPDATE twitter_score 
@@ -106,7 +101,7 @@ def add_to_score(username: str, tweet_count: int, score: float, trust: float, in
                     scorer([score, tweet_count], [user_exists[2], user_exists[1]]), 
                     trust + user_exists[3], 
                     investigate, 
-                    Json(combined_contexts),  # Use the flattened list here
+                    set(list(set(contexts) | set(user_exists[5]))),
                     datetime.now(), 
                     username
                 )
