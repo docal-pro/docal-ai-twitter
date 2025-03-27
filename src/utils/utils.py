@@ -1,5 +1,6 @@
 import os
 import psycopg2
+from psycopg2.extras import Json
 from datetime import datetime, timezone
 
 
@@ -30,15 +31,30 @@ def add_to_schedule(schedule_data: dict):
     try:
         connection, cursor = connect_to_database()
 
-        # Insert tweet data into database
+        # Check if schedule already exists for a caller
         cursor.execute(
-            "INSERT INTO schedule (caller, username, transaction, contexts, tweet_ids, timestamp) VALUES (%s, %s, %s, %s, %s, %s)",
-            (schedule_data['caller'], schedule_data['username'], schedule_data['transaction'], schedule_data['contexts'], schedule_data['tweet_ids'], datetime.now(timezone.utc))
+            "SELECT * FROM schedule WHERE caller = %s",
+            (schedule_data['caller'],)
         )
+        schedule_exists = cursor.fetchone()
+
+        if schedule_exists:
+            # Update existing schedule
+            cursor.execute(
+                "UPDATE schedule SET username = %s, transaction = %s, contexts = %s, tweet_ids = %s, timestamp = %s WHERE caller = %s",
+                (schedule_data['username'], schedule_data['transaction'], schedule_data['contexts'], schedule_data['tweet_ids'], datetime.now(timezone.utc), schedule_data['caller'])
+            )
+        else:
+            # Insert new schedule
+            cursor.execute(
+                "INSERT INTO schedule (caller, username, transaction, contexts, tweet_ids, timestamp) VALUES (%s, %s, %s, %s, %s, %s)",
+            (schedule_data['caller'], schedule_data['username'], schedule_data['transaction'], schedule_data['contexts'], schedule_data['tweet_ids'], datetime.now(timezone.utc))
+            )
+
         connection.commit()
         cursor.close()
         connection.close()
-        print(f"✅ Schedule for {schedule_data['username']} added to database")
+        print(f"✅ Schedule for {schedule_data['caller']} added to database")
     except Exception as e:
         print(f"❌ Error adding schedule to database: {e}")
 
@@ -67,13 +83,18 @@ def add_to_score(username: str, tweet_count: int, score: float, trust: float, in
 
         # Check if user exists
         cursor.execute(
-            "SELECT * FROM twitter_score WHERE username = %s",
-            (username,)
+            f"SELECT * FROM twitter_score WHERE username = '{username}'"
         )
         user_exists = cursor.fetchone()
 
         if user_exists:
             # Update existing user
+            # Flatten the lists and remove duplicates
+            combined_contexts = list(set(
+                context for context in (contexts if contexts != ["null"] else []) + (user_exists[5] if user_exists[5] is not None else [])
+            ))
+
+            # Use the flattened list in the Json function
             cursor.execute(
                 """
                 UPDATE twitter_score 
@@ -85,7 +106,7 @@ def add_to_score(username: str, tweet_count: int, score: float, trust: float, in
                     scorer([score, tweet_count], [user_exists[2], user_exists[1]]), 
                     trust + user_exists[3], 
                     investigate, 
-                    list(set(contexts if contexts != ["null"] else [] + user_exists[5])),
+                    Json(combined_contexts),  # Use the flattened list here
                     datetime.now(), 
                     username
                 )

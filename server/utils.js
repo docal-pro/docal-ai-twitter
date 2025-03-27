@@ -1,7 +1,6 @@
 // Default usernames
 export const defaultUsernames = [
-  "@elonmusk",
-  "@jack",
+  "@",
 ];
 
 // Generate default users from usernames
@@ -24,6 +23,6 @@ export const defaultSchedule = [
     transaction: "0x0000000000000000000000000000000000000000",
     contexts: [],
     tweet_ids: [],
-    timestamp: "2025-03-27 00:00:00.000000+00:00",
+    timestamp: "1970-01-01 00:00:00.000000+00:00",
   },
 ];

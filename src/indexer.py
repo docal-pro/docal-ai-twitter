@@ -93,25 +93,18 @@ async def get_tweets(username: str, flag: str = "none", caller: str = "", transa
         return []
 
 
-def check_existing_tweets(username: str, age_limit_hours: int) -> bool:
-    """Check if tweets exist and are recent enough"""
+def check_existing_username(username: str) -> bool:
+    """Check if username exists"""
     tweets_dir = Path("tweets")
     if not tweets_dir.exists():
         return False
 
     user_dir = Path(f"tweets/{username}")
-    tweet_file = user_dir / "tweets.json"
+    tweet_file = user_dir / "input.json"
 
     if tweet_file.exists():
-        # Check file modification time
-        file_mod_time = datetime.fromtimestamp(tweet_file.stat().st_mtime)
-        time_diff = datetime.now() - file_mod_time
-
-        if time_diff < timedelta(hours=age_limit_hours):
-            print(f"✅ Tweets for @{username} are recent (modified {time_diff.seconds // 3600} hours ago). Skipping fetch")
-            return True
-
-        print(f"⚠️  Tweets for @{username} are outdated (modified {time_diff.seconds // 3600} hours ago). Fetching new tweets...")
+        # Check is user has been indexed
+        return True
 
     return False
 
@@ -125,26 +118,30 @@ async def main():
     username = sys.argv[1]
     flag = sys.argv[2]
     ctxs = sys.argv[3].split(",")
-    caller = sys.argv[5]
-    transaction = sys.argv[6]
+    caller = sys.argv[4]
+    transaction = sys.argv[5]
 
-    # Check if tweets exist and are fresh
-    if check_existing_tweets(username, DATA_AGE_LIMIT):
+    # Check if username has already been indexed
+    if check_existing_username(username):
+        print(f"ℹ️  User {username} has already been indexed. Skipping fetch")
         sys.exit(0)
 
     # Fetch tweets
     tweets_data = await get_tweets(username, flag, caller, transaction, ctxs)
-    
+
+    # Create directory
+    output_dir = f"tweets/{username}"
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = f"{output_dir}/input.json"
+
     if not tweets_data:
+        # Save empty file
+        with open(output_file, 'w') as f:
+            json.dump([], f, indent=2)
+
         # Add to score
         add_to_score(username, 0, 0, 0, 0, ctxs)
     else:
-        # Create directory
-        output_dir = f"tweets/{username}"
-        os.makedirs(output_dir, exist_ok=True)
-
-        output_file = f"{output_dir}/tweets.json"
-
         # Save tweets to file
         with open(output_file, 'w') as f:
             json.dump(tweets_data, f, indent=2)

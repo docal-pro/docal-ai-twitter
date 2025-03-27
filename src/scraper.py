@@ -121,6 +121,27 @@ def check_existing_tweets(tweet_ids: list[str]) -> tuple[bool, str, list]:
         
     return False, [], [], []
 
+def check_existing_contexts(username: str) -> list[str]:
+    """Check if contexts already exist in the database"""
+    print(f"🔎 Checking for contexts...")
+    
+    # Query the database for the contexts
+    try:
+        connection, cursor = connect_to_database()
+
+        # Query for contexts
+        cursor.execute(
+            f"SELECT contexts FROM twitter_score WHERE username = '{username}'"
+        )
+        results = cursor.fetchall()
+        
+        existing_contexts = [row[0] for row in results]
+        cursor.close()
+        connection.close()
+        return existing_contexts
+    except Exception as e:
+        print(f"❌ Error querying database: {e}")
+        return []
 
 async def main():
     if len(sys.argv) != 7:
@@ -177,16 +198,22 @@ async def main():
         
         with open(output_file, 'w') as f:
             json.dump(tweet_list, f, indent=2)
-            
-        print(f"✅ Tweet saved to {output_file}")
+
+        existing_contexts = check_existing_contexts(tweet_data['username'])
+        if existing_contexts:
+            for ctx in ctxs:
+                if ctx not in existing_contexts:
+                    existing_contexts.append(ctx)
+            ctxs = existing_contexts
             
         # Add to database
         add_to_database(tweet_data)
         
         # Add to score
         add_to_score(tweet_data['username'], len(tweet_list), 0, 0, 1, ctxs)
+    
+    print(f"✅ ({len(tweets_data)}/{len(tweet_ids)}) tweets saved to {output_file}")
         
-
 
 if __name__ == "__main__":
     asyncio.run(main())
