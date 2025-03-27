@@ -1,6 +1,6 @@
 import os
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def scorer(new: list[float, int], old: list[float, int]) -> float:
@@ -33,7 +33,7 @@ def add_to_schedule(schedule_data: dict):
         # Insert tweet data into database
         cursor.execute(
             "INSERT INTO schedule (caller, username, transaction, contexts, tweet_ids, timestamp) VALUES (%s, %s, %s, %s, %s, %s)",
-            (schedule_data['caller'], schedule_data['username'], schedule_data['transaction'], schedule_data['contexts'], schedule_data['tweet_ids'], datetime.now())
+            (schedule_data['caller'], schedule_data['username'], schedule_data['transaction'], schedule_data['contexts'], schedule_data['tweet_ids'], datetime.now(timezone.utc))
         )
         connection.commit()
         cursor.close()

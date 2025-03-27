@@ -19,10 +19,11 @@ export const defaultUsers = defaultUsernames.map((username, i) => ({
 // Default placeholder schedule
 export const defaultSchedule = [
   {
+    caller: "0x0000000000000000000000000000000000000000",
     username: "@elonmusk",
     transaction: "0x0000000000000000000000000000000000000000",
     contexts: ["context1", "context2"],
-    tweet_ids: ["12345678909876543210", "12345678909876543211"],
-    timestamp: null,
+    tweet_ids: ["12345678909876543210", "12345678909876543211", "12345678909876543212", "12345678909876543213"],
+    timestamp: "2025-03-27 00:00:00.000000+00:00",
   },
 ];
