@@ -80,7 +80,7 @@ async def get_tweets(username: str, flag: str = "none", caller: str = "", transa
         schedule_data = {
             "caller": caller,
             "transaction": transaction,
-            "username": "",
+            "username": "@",
             "tweet_ids": [],
             "contexts": ctxs,
         }

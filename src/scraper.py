@@ -33,7 +33,7 @@ async def get_tweets(tweet_ids: list[str], flag: str = "none", caller: str = "",
             schedule_data = {
                 "caller": caller,
                 "transaction": transaction,
-                "username": "",
+                "username": "@",
                 "tweet_ids": tweet_ids,
                 "contexts": ctxs,
             }
@@ -77,7 +77,7 @@ async def get_tweets(tweet_ids: list[str], flag: str = "none", caller: str = "",
         schedule_data = {
             "caller": caller,
             "transaction": transaction,
-            "username": "",
+            "username": "@",
             "tweet_ids": [],
             "contexts": ctxs,
         }
