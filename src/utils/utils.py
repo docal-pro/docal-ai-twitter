@@ -113,13 +113,7 @@ def add_to_score(
         user_exists = cursor.fetchone()
 
         if user_exists:
-            # Update existing use
-            print(user_exists[5])
-            print(contexts)
-            print(contexts + user_exists[5])
-            print(set(contexts + user_exists[5]))
-            print(list(set(contexts + user_exists[5])))
-
+            # Update existing user
             cursor.execute(
                 """
                 UPDATE twitter_score 

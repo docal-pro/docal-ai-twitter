@@ -30,6 +30,9 @@ async def main():
     caller = sys.argv[5]
     transaction = sys.argv[6]
 
+    # Save cache
+    tweet_ids_cache = tweet_ids
+
     # First check if tweets already exist
     status, existing_tweet_ids, existing_usernames, existing_tweets = (
         check_existing_tweets(tweet_ids)
@@ -82,7 +85,7 @@ async def main():
         # Add to score
         add_to_score(tweet_data["username"], len(tweet_list), 0, 0, 1, ctxs)
 
-    print(f"✅ ({len(tweets_data)}/{len(tweet_ids)}) tweets saved to {output_file}")
+    print(f"✅ ({len(tweets_data)}/{len(tweet_ids_cache)}) tweets saved to {output_file}")
 
 
 if __name__ == "__main__":
