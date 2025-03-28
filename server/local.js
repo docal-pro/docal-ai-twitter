@@ -7,13 +7,12 @@ import {
   writeFileSync,
 } from "fs";
 import { exec } from "child_process";
-import { join } from "path";
+import { join, dirname } from "path";
 import axios from "axios";
 import dotenv from "dotenv";
 import { checkDatabase, createDatabase, getAdminClient } from "./database.js";
 import { defaultUsers, defaultSchedule } from "./utils.js";
 import { fileURLToPath } from "url";
-import { dirname } from "path";
 import cors from "cors";
 
 dotenv.config();
@@ -211,7 +210,7 @@ app.post("/process", (req, res) => {
 app.post("/trigger", async (req, res) => {
   console.log("🔎 Triggering data indexing for request:\n", req.body);
   return res.status(502).json({ error: "Method currently unavailable" });
-  const { user } = req.body;
+  const { user, caller, transaction } = req.body;
   if (!user) {
     return res.status(400).json({ error: "Missing user" });
   }

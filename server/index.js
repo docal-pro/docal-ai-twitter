@@ -1,5 +1,6 @@
 import express, { json } from "express";
 import {
+  fs,
   existsSync,
   statSync,
   unlinkSync,
@@ -15,7 +16,6 @@ import { defaultUsers, defaultSchedule } from "./utils.js";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import https from "https";
-import fs from "fs";
 
 dotenv.config();
 const { get } = axios;
@@ -171,7 +171,7 @@ app.post("/state", (req, res) => {
 
 // Method: Process an investigate request
 app.post("/process", (req, res) => {
-  console.log("🔎 Processing request for request:\n", req.body);
+  console.log("🔎 Processing request:\n", req.body);
   const { func, user, data, ctxs, caller, transaction } = req.body;
 
   if (!func) {
@@ -183,12 +183,13 @@ app.post("/process", (req, res) => {
   let tweetIds;
   let username;
   if (func !== "scraper" && func !== "indexer") {
-    username = data;
+    username = user;
     filePath = join(__dirname, `results/${username}/${func}.csv`);
   } else if (func === "indexer") {
     username = user;
     filePath = join(__dirname, `tweets/${username}/input.json`);
   } else if (func === "scraper") {
+    username = user;
     filePath = join(__dirname, `tweets/${user}/input.json`);
     tweetIds = data;
   }
