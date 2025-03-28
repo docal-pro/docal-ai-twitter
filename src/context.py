@@ -2,11 +2,9 @@ import json
 import csv
 import os
 import sys
-import time
 import shutil
-from typing import List, Dict, Optional
+from typing import Dict, Optional
 from dotenv import load_dotenv
-from pathlib import Path
 import asyncio
 from pyppeteer import launch
 import subprocess
@@ -354,7 +352,9 @@ class TweetContextBuilder:
                         thread_tweets.append(parent_tweet)
                         return parent_tweet
                 except asyncio.TimeoutError:
-                    print(f"❌ Timeout on attempt {retry_count + 1} for tweet {tweet_id}")
+                    print(
+                        f"❌ Timeout on attempt {retry_count + 1} for tweet {tweet_id}"
+                    )
                     self.stats["timeout_errors"] += 1
                     self.print_stats()
                 except Exception as e:
