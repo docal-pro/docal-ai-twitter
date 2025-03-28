@@ -95,7 +95,7 @@ async def main():
             add_to_score(tweet_data["username"], len(tweet_list), 0, 0, 1, ctxs)
 
         print(
-            f"✅ ({len(tweets_data)}/{len(tweet_ids_cache)}) tweets saved to {output_file}"
+            f"✅ ({len(tweets_data)}/{len(tweet_ids_cache)}) tweets saved for {username}"
         )
     elif len(tweet_ids) == 0 and username != "@" and len(ctxs) > 0:
         # Filter out null contexts
