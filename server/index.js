@@ -174,9 +174,9 @@ app.post("/process", (req, res) => {
   console.log("🔎 Processing request for request:\n", req.body);
   const { func, user, data, ctxs, caller, transaction } = req.body;
 
-  if (!func || !data) {
-    console.log("❌ Missing function or data");
-    return res.status(400).json({ error: "Missing function or data" });
+  if (!func) {
+    console.log("❌ Missing function");
+    return res.status(400).json({ error: "Missing function" });
   }
 
   let filePath;
@@ -187,9 +187,9 @@ app.post("/process", (req, res) => {
     filePath = join(__dirname, `results/${username}/${func}.csv`);
   } else if (func === "indexer") {
     username = user;
-    filePath = join(__dirname, `tweets/${username}/tweets.json`);
+    filePath = join(__dirname, `tweets/${username}/input.json`);
   } else if (func === "scraper") {
-    filePath = join(__dirname, `tweets/${user}/tweets.json`);
+    filePath = join(__dirname, `tweets/${user}/input.json`);
     tweetIds = data;
   }
 
@@ -226,9 +226,9 @@ app.post("/trigger", async (req, res) => {
     return res.status(400).json({ error: "Missing user" });
   }
 
-  const tweetsPath = join(__dirname, `tweets/${user}/tweets.json`);
+  const tweetsPath = join(__dirname, `tweets/${user}/input.json`);
 
-  // Check if tweets.json exists and is recent (within last N hours)
+  // Check if input.json exists and is recent (within last N hours)
   if (existsSync(tweetsPath)) {
     const lastModified = statSync(tweetsPath).mtime;
     const dataAgeLimitAgo = Date.now() - DATA_AGE_LIMIT * 60 * 60 * 1000;
