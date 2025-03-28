@@ -200,14 +200,15 @@ app.post("/process", (req, res) => {
   }
 
   let flag = "false";
+  let source = "/root/docal-ai-twitter";
   const command =
     func !== "scraper"
       ? func !== "indexer"
         ? func === "classifier"
-          ? `python3 src/${func}.py ${username} "${ctxs}"` // Classifier: needs contexts
-          : `python3 src/${func}.py ${username}` // Other functions: don't need contexts or flags
-        : `python3 src/${func}.py ${username} ${flag} "${ctxs}" ${caller} ${transaction}` // Indexer: needs flag and contexts
-      : `python3 src/${func}.py ${username} ${tweetIds} ${flag} "${ctxs}" ${caller} ${transaction}`; // Scraper: needs flag and contexts
+          ? `python3 ${source}/src/${func}.py ${username} "${ctxs}"` // Classifier: needs contexts
+          : `python3 ${source}/src/${func}.py ${username}` // Other functions: don't need contexts or flags
+        : `python3 ${source}/src/${func}.py ${username} ${flag} "${ctxs}" ${caller} ${transaction}` // Indexer: needs flag and contexts
+      : `python3 ${source}/src/${func}.py ${username} ${tweetIds} ${flag} "${ctxs}" ${caller} ${transaction}`; // Scraper: needs flag and contexts
   exec(command, (error, stdout, stderr) => {
     if (error) {
       console.log(error);
