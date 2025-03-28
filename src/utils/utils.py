@@ -239,9 +239,10 @@ async def get_tweets_by_ids(
     """Get tweet data using agent-twitter-client"""
     print(f"🔎 Searching for tweets...")
     try:
+        source_dir = os.getenv("SOURCE_DIR")
         process = await asyncio.create_subprocess_exec(
             "node",
-            "agent/scraper.js",
+            f"{source_dir}/agent/scraper.js",
             ",".join(tweet_ids),
             flag,
             stdout=asyncio.subprocess.PIPE,
@@ -322,9 +323,10 @@ async def get_tweets_by_username(
     """Get multiple tweets from a username using agent-twitter-client"""
     print(f"🔎 Searching for tweets from @{username}...")
     try:
+        source_dir = os.getenv("SOURCE_DIR")
         process = await asyncio.create_subprocess_exec(
             "node",
-            "agent/indexer.js",
+            f"{source_dir}/agent/indexer.js",
             username,
             flag,
             stdout=asyncio.subprocess.PIPE,
