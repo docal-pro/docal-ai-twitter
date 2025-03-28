@@ -172,7 +172,7 @@ app.post("/process", (req, res) => {
   let username;
 
   if (func !== "scraper" && func !== "indexer") {
-    username = data;
+    username = user;
     filePath = join(__dirname, `results/${username}/${func}.csv`);
   } else if (func === "indexer") {
     username = user;
