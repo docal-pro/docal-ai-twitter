@@ -1,6 +1,5 @@
 import express, { json } from "express";
-import {
-  fs,
+import fs, {
   existsSync,
   statSync,
   unlinkSync,
